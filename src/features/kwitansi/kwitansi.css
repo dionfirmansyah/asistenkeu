@@ -1,0 +1,193 @@
+@page { size: A4 portrait; margin: 0; }
+
+.kwt-halaman *, .kwt-halaman *::before, .kwt-halaman *::after { box-sizing: border-box; }
+.kwt-halaman, .kwt-halaman p, .kwt-halaman h1 { margin: 0; padding: 0; }
+.kwt-halaman {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  padding: 11.5mm 0 0 16mm;
+  margin: 8mm auto;
+  background: #fff;
+  color: #000;
+  font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+  font-size: 9pt;
+  box-shadow: 0 1mm 4mm rgba(0, 0, 0, .25);
+  break-after: page;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Kotak kwitansi (boleh tumbuh bila uraian panjang).
+   padding-bottom 10mm mencadangkan zona barcode agar konten
+   tidak pernah mengalir ke area barcode di bawah. */
+.kwt-kotak {
+  position: relative;
+  width: 179mm;
+  min-height: 148.5mm;
+  padding-bottom: 10mm;
+  border: .5mm solid #000;
+}
+
+/* 1-3. Kop, judul, garis pemisah */
+.kwt-kop {
+  height: 19.3mm;
+  padding: 2.2mm 0 0 4.4mm;
+  border-bottom: .5mm solid #000;
+}
+.kwt-kop-instansi { font-weight: 700; line-height: 5.1mm; }
+.kwt-kop h1 {
+  margin-top: -.45mm;
+  font-size: 10pt;
+  font-weight: 700;
+  line-height: 5mm;
+  text-align: center;
+}
+
+/* 4. Nomor dan sumber dana */
+.kwt-nomor-baris {
+  position: relative;
+  height: 6.6mm;
+  margin-top: 1.5mm;
+}
+.kwt-nomor {
+  width: 80mm;
+  height: 6.6mm;
+  margin: 0 0 0 49.8mm;
+  border: .25mm solid #000;
+  font-weight: 700;
+  line-height: 6.1mm;
+  text-align: center;
+}
+.kwt-sumberdana {
+  position: absolute;
+  top: 0;
+  right: 4.8mm;
+  line-height: 6.6mm;
+}
+
+/* 5-8. Baris isian: label | titik dua | nilai */
+.kwt-baris {
+  display: grid;
+  grid-template-columns: 34mm 4.6mm 1fr;
+  padding-left: 7.6mm;
+  padding-right: 5mm;
+  line-height: var(--kwt-lh, 6.2mm);
+  min-height: var(--kwt-lh, 6.2mm);
+}
+.kwt-baris .kwt-nilai { padding-right: 2mm; }
+.kwt-menjorok { padding-left: 18.8mm; grid-template-columns: 22.8mm 4.6mm 1fr; }
+
+.kwt-diterima   { --kwt-lh: 6.2mm; margin-top: 1mm; }
+.kwt-uang       { --kwt-lh: 7.4mm; }
+.kwt-uang-nilai { display: flex; justify-content: space-between; width: 38.8mm; font-weight: 700; }
+.kwt-terbilang  { --kwt-lh: 5.4mm; }
+.kwt-terbilang .kwt-nilai { font-weight: 700; font-style: italic; }
+.kwt-pembayaran { --kwt-lh: 6.2mm; margin-top: 2mm; }
+.kwt-kegiatan   { --kwt-lh: 6.2mm; margin-top: 5mm; }
+.kwt-rekening   { --kwt-lh: 5.2mm; }
+
+/* 9. Catatan keuangan */
+.kwt-catatan {
+  display: grid;
+  grid-template-columns: 34mm 1fr;
+  padding-left: 7.6mm;
+  margin-top: 2.3mm;
+  line-height: 6.2mm;
+}
+
+/* 10. Rincian nilai */
+.kwt-rincian { margin: .95mm 0 0 43.4mm; width: 66mm; }
+.kwt-rincian .kwt-r {
+  display: grid;
+  grid-template-columns: 27.4mm 1.3mm 36.8mm;
+  line-height: 5.1mm;
+}
+.kwt-rincian .kwt-v {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1.3mm 0 .5mm;
+}
+.kwt-rincian .kwt-total { margin-top: .8mm; }
+.kwt-rincian .kwt-total .kwt-v {
+  border-top: .5mm solid #000;
+  border-bottom: 1mm solid #000;
+  line-height: 5.6mm;
+}
+
+/* 11. Tanda tangan */
+.kwt-ttd {
+  display: grid;
+  grid-template-columns: 90.6mm 1fr;
+  padding-left: 27.4mm;
+  margin-top: 2.95mm;
+  line-height: 4.9mm;
+}
+.kwt-ttd .kwt-nama { margin-top: 10mm; }
+
+/* 12. Barcode: dikunci 44 x 7 mm di kanan bawah, di atas konten lain */
+.kwt-barcode-wrap {
+  position: absolute;
+  right: 3.8mm;
+  bottom: 2mm;
+  width: 44mm;
+  height: 6mm;
+  overflow: hidden;
+  background: #fff;
+}
+.kwt-barcode-wrap .kwt-barcode {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Penanda cetak di luar kotak */
+.kwt-penanda {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  margin-top: 2.6mm;
+}
+.kwt-penanda-label {
+  width: 32.5mm;
+  padding: .4mm 0 .4mm 4mm;
+  background: #000;
+  color: #fff;
+  font-size: 6pt;
+}
+.kwt-penanda-waktu { font-size: 7pt; }
+
+/* Peringatan hanya di layar */
+.kwt-negatif {
+  margin-bottom: 3mm;
+  padding: 2mm 4mm;
+  background: #fef2f2;
+  border: 1px solid #f87171;
+  color: #b91c1c;
+  font-size: 9pt;
+}
+@media print {
+  .kwt-negatif { display: none !important; }
+}
+
+/* Pratinjau di dalam dialog aplikasi */
+.kwt-pratinjau {
+  overflow: auto;
+  max-height: 72vh;
+  background: #d9dce1;
+}
+.kwt-pratinjau .kwt-halaman {
+  zoom: .8;
+  margin: 4mm auto;
+}
+
+/* Cetak: hanya lembar kwitansi */
+@media screen {
+  #kwt-print-root { display: none; }
+}
+@media print {
+  body > *:not(#kwt-print-root) { display: none !important; }
+  #kwt-print-root { display: block !important; }
+  #kwt-print-root .kwt-halaman { margin: 0; box-shadow: none; }
+  #kwt-print-root .kwt-negatif { display: none !important; }
+}
