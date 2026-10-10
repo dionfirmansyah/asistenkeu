@@ -32,7 +32,12 @@ export default function RawView() {
   if (!names.length) return <p className="text-sm text-muted-foreground">Belum ada data.</p>;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Data database</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Isi mentah tabel hasil decode file .SMD.</p>
+      </div>
+      <div className="space-y-2">
       <div className="flex flex-wrap gap-1 border-b pb-2">
         {names.map((n) => (
           <Button key={n} size="sm" variant={n === current ? "default" : "outline"} className="h-7 text-xs" onClick={() => { setActive(n); setPage(0); setSearch(""); }}>
@@ -47,26 +52,30 @@ export default function RawView() {
         <Button variant="outline" size="sm" onClick={async () => { setCopied(await copyText(toCSV(cols.map((c) => [c, c] as [string, string]), filtered))); setTimeout(() => setCopied(false), 1400); }}>{copied ? "Tersalin" : "Salin CSV"}</Button>
         <Button variant="outline" size="sm" onClick={() => download(`${baseName}_${current}.csv`, toCSV(cols.map((c) => [c, c] as [string, string]), filtered))}>Unduh CSV</Button>
       </div>
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-[13px]">
           <thead>
-            <tr className="text-left text-xs text-muted-foreground">
-              {cols.map((c) => <th key={c} scope="col" className="px-2 py-1">{c}</th>)}
+            <tr className="bg-muted text-left">
+              {cols.map((c) => <th key={c} scope="col" className="h-10 px-3 text-[13px] font-semibold">{c}</th>)}
             </tr>
           </thead>
           <tbody>
             {slice.map((r, i) => (
-              <tr key={i} className="border-t">
-                {cols.map((c) => <td key={c} className="max-w-64 truncate px-2 py-1">{typeof r[c] === "number" || typeof r[c] === "string" ? String(r[c]) : vt(r[c])}</td>)}
+              <tr key={i} className="border-t hover:bg-primary/5">
+                {cols.map((c) => <td key={c} className="h-11 max-w-64 truncate px-3">{typeof r[c] === "number" || typeof r[c] === "string" ? String(r[c]) : vt(r[c])}</td>)}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>Menampilkan {slice.length} dari {filtered.length.toLocaleString("id-ID")} baris</span>
+        <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Sebelumnya</Button>
         <span>Halaman {page + 1} / {pages}</span>
         <Button size="sm" variant="outline" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>Berikutnya</Button>
+        </div>
+      </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRabFlat } from "./rab";
 import { decodeSmd, hasJetMagic } from "./decode";
 import { validate } from "./validate";
-import { nf0, rp } from "./format";
+import { nf0, rp, tgl } from "./format";
 
 describe("decodeSmd", () => {
   it("XOR simetris (decode(encode(x)) === x)", () => {
@@ -19,7 +19,8 @@ describe("decodeSmd", () => {
 describe("format", () => {
   it("format rupiah id-ID", () => {
     expect(nf0(1234567)).toBe("1.234.567,00");
-    expect(rp(1500000)).toBe("Rp 1.500.000,00");
+    expect(rp(1500000)).toBe("Rp 1.500.000");
+    expect(tgl("2026-10-06T00:00:00.000Z")).toBe("6 Okt 2026");
   });
 });
 

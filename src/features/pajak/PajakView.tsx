@@ -161,35 +161,39 @@ export default function PajakView() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Kalkulator pajak</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Simulasi potongan pajak belanja desa sesuai tarif terbaru.</p>
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Kalkulator Pajak</CardTitle></CardHeader>
-        <CardContent className="space-y-3 p-3">
-          <label className="block text-xs">Uraian
-            <Input className="mt-1" value={s.uraian} onChange={(e) => setS({ ...s, uraian: e.target.value })} />
+        <CardHeader className="p-4 pb-1 md:p-5 md:pb-1"><CardTitle>Kalkulator pajak</CardTitle></CardHeader>
+        <CardContent className="space-y-3 p-4 md:p-5">
+          <label className="block text-sm font-medium">Uraian
+            <Input className="mt-1.5" value={s.uraian} onChange={(e) => setS({ ...s, uraian: e.target.value })} />
           </label>
-          <label className="block text-xs">Kategori
+          <label className="block text-sm font-medium">Kategori
             <Select value={s.kat} onValueChange={(v) => setS({ ...s, kat: v ?? s.kat })}>
-              <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mt-1.5 w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{Object.entries(KATEGORI).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
             </Select>
           </label>
-          <label className="block text-xs">Nilai belanja (Rp)
-            <MoneyInput className="mt-1" value={nilai} onChange={(n) => setS({ ...s, nilai: n ? String(n) : "" })} />
+          <label className="block text-sm font-medium">Nilai belanja (Rp)
+            <MoneyInput className="mt-1.5" value={nilai} onChange={(n) => setS({ ...s, nilai: n ? String(n) : "" })} />
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block text-xs">Status NPWP
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm font-medium">Status NPWP
               <Select value={s.npwp} onValueChange={(v) => setS({ ...s, npwp: v ?? s.npwp })} disabled={!kat.npwp}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1.5 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ya">Punya NPWP</SelectItem>
                   <SelectItem value="tidak">Tidak punya NPWP</SelectItem>
                 </SelectContent>
               </Select>
             </label>
-            <label className="block text-xs">Basis PPN
+            <label className="block text-sm font-medium">Basis PPN
               <Select value={s.ppnBasis} onValueChange={(v) => setS({ ...s, ppnBasis: (v as "excl" | "incl") ?? s.ppnBasis })}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1.5 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="excl">Belum termasuk PPN</SelectItem>
                   <SelectItem value="incl">Sudah termasuk PPN</SelectItem>
@@ -197,13 +201,13 @@ export default function PajakView() {
               </Select>
             </label>
           </div>
-          <div className="space-y-2 border-t pt-2">
-            <div className="text-xs font-semibold">Tarif (dapat disesuaikan)</div>
+          <div className="space-y-3 border-t pt-3">
+            <div className="text-sm font-semibold">Tarif (dapat disesuaikan)</div>
             {kat.rates.map((k) => (
-              <label key={k} className="block text-xs">
+              <label key={k} className="block text-sm font-medium">
                 {RATE_LABELS[k]}
-                <Input className="mt-1" type="number" step="0.01" value={s.rates[k]} onChange={(e) => setS({ ...s, rates: { ...s.rates, [k]: Number(e.target.value) || 0 } })} />
-                <div className="text-[10px] text-muted-foreground">{RATE_HINTS[k]}</div>
+                <Input className="mt-1.5" type="number" step="0.01" value={s.rates[k]} onChange={(e) => setS({ ...s, rates: { ...s.rates, [k]: Number(e.target.value) || 0 } })} />
+                <div className="mt-1 text-xs text-muted-foreground">{RATE_HINTS[k]}</div>
               </label>
             ))}
           </div>
@@ -212,8 +216,8 @@ export default function PajakView() {
       </Card>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Simulasi potongan pajak</CardTitle></CardHeader>
-        <CardContent className="space-y-1 p-3 font-mono text-xs">
+        <CardHeader className="p-4 pb-1 md:p-5 md:pb-1"><CardTitle>Simulasi potongan pajak</CardTitle></CardHeader>
+        <CardContent className="space-y-1 p-4 font-mono text-xs md:p-5">
           {!nilai && <p className="text-muted-foreground">Ketik nilai belanja di atas untuk melihat simulasi potongan pajak.</p>}
           {!!nilai && (
             <>
@@ -245,7 +249,7 @@ export default function PajakView() {
 
       <Card>
         <CardHeader className="p-3 pb-1">
-          <CardTitle className="text-sm">Dasar aturan penarikan pajak</CardTitle>
+          <CardTitle>Dasar aturan penarikan pajak</CardTitle>
           <p className="text-xs text-muted-foreground">
             Ringkas per {ATURAN_UPDATED} — bukan nasihat hukum. Tarif mengikuti peraturan saat transaksi;
             verifikasi ke pajak.go.id / peraturan.go.id bila ragu.

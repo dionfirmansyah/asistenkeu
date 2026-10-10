@@ -1,12 +1,18 @@
 import { useSmdStore } from "@/stores/smd-store";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 
 const ORDER = { ERROR: 0, WARNING: 1, INFO: 2, PASS: 3 } as const;
-const VARIANT: Record<string, "destructive" | "secondary" | "default" | "outline"> = {
+const TONE: Record<string, StatusTone> = {
   ERROR: "destructive",
-  WARNING: "secondary",
-  INFO: "outline",
-  PASS: "default",
+  WARNING: "warning",
+  INFO: "info",
+  PASS: "success",
+};
+const LABEL: Record<string, string> = {
+  ERROR: "Galat",
+  WARNING: "Peringatan",
+  INFO: "Info",
+  PASS: "Sesuai",
 };
 
 export default function ValidasiView() {
@@ -16,16 +22,20 @@ export default function ValidasiView() {
   const sorted = [...val].sort((a, b) => ORDER[a.level] - ORDER[b.level]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2 text-sm">
+    <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Validasi data</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Pemeriksaan konsistensi data Siskeudes.</p>
+      </div>
+      <div className="flex flex-wrap gap-2 text-sm">
         {(["ERROR", "WARNING", "PASS", "INFO"] as const).map((l) => (
-          <Badge key={l} variant={VARIANT[l]}>{l} {counts[l]}</Badge>
+          <StatusBadge key={l} tone={TONE[l]}>{LABEL[l]} {counts[l]}</StatusBadge>
         ))}
       </div>
       {sorted.map((v, i) => (
-        <details key={i} className="rounded-md border px-3 py-2 text-sm">
+        <details key={i} className="rounded-lg border bg-card px-4 py-3 text-sm shadow-sm">
           <summary className="flex cursor-pointer items-center gap-2">
-            <Badge variant={VARIANT[v.level]}>{v.level}</Badge>
+            <StatusBadge tone={TONE[v.level]}>{LABEL[v.level]}</StatusBadge>
             <span className="text-xs text-muted-foreground">{v.group}</span>
             <span>{v.text}</span>
           </summary>

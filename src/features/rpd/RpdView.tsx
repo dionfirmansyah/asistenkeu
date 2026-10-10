@@ -212,10 +212,13 @@ export default function RpdView() {
   if (!docId) {
     // ---- Daftar RPD ----
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Rencana Penggunaan</h2>
-          <Button size="sm" onClick={() => setModal("new")}>RPD Baru</Button>
+      <div className="space-y-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-primary">Rencana penggunaan</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Dokumen rencana penggunaan dana per kegiatan.</p>
+          </div>
+          <Button size="sm" onClick={() => setModal("new")}>RPD baru</Button>
         </div>
         {!docs.length && (
           <p className="text-sm text-muted-foreground">Belum ada RPD. Klik <b>RPD Baru</b> untuk membuat dokumen rencana penggunaan dana.</p>
@@ -272,7 +275,7 @@ export default function RpdView() {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Dokumen</span>
+            <span className="mr-1 text-xs font-medium text-muted-foreground">Dokumen</span>
             <Button size="sm" variant="outline" onClick={() => setModal("new")}><Plus className="size-3.5" /> Baru</Button>
             <Button size="sm" variant="outline" onClick={() => setModal("edit")} disabled={!doc}><Pencil className="size-3.5" /> Edit</Button>
             <Button size="sm" variant="outline" disabled={!entries.length} onClick={async () => {
@@ -289,7 +292,7 @@ export default function RpdView() {
             }}><Trash2 className="size-3.5" /> Hapus RPD</Button>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ekspor / Impor</span>
+            <span className="mr-1 text-xs font-medium text-muted-foreground">Ekspor / Impor</span>
             <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs hover:bg-accent">
               <FileUp className="size-3.5" /> Impor JSON
               <input
@@ -324,14 +327,14 @@ export default function RpdView() {
 
       {/* Tambah rencana */}
       <Card className="overflow-hidden border-primary/20">
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 pb-3 pt-3">
+        <div className="border-b bg-muted/40 px-4 pb-3 pt-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base">Tambah rencana</CardTitle>
               <p className="text-xs text-muted-foreground">Pilih kegiatan → isi volume → tambahkan. Anggaran terhitung otomatis.</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Bulan</span>
+              <span className="text-xs font-medium text-muted-foreground">Bulan</span>
               <Select value={bulan} onValueChange={(v) => setBulan(v === "_none" ? "" : v ?? "")}>
                 <SelectTrigger className="h-9 w-40 border-primary/30 bg-card"><SelectValue placeholder="Belum ditentukan" /></SelectTrigger>
                 <SelectContent>
@@ -374,13 +377,13 @@ export default function RpdView() {
         </div>
         <CardContent className="space-y-2 p-3">
           {!keg && (
-            <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
+            <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
               <div className="text-2xl">🧭</div>
               <div className="mt-1 font-medium">Mulai dengan memilih kegiatan di atas</div>
               <div className="text-xs">Gunakan kolom pencarian untuk menemukan kegiatan dengan cepat</div>
             </button>
           )}
-          {keg && !rinc && <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
+          {keg && !rinc && <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
           {visible.map((it) => {
             const used = usedOf(it.key);
             const sisaVol = Math.max(0, it.vol - used.vol);
@@ -391,7 +394,7 @@ export default function RpdView() {
             const amtKini = amtOf(it);
             const overAmt = terisi && amtKini > sisaAmt + 1;
             return (
-              <div key={it.key} className={`rounded-xl border p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5 shadow-sm" : "hover:border-primary/30"}`}>
+              <div key={it.key} className={`rounded-lg border p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5 shadow-sm" : "hover:border-primary/30"}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{it.r.Uraian}</div>
@@ -413,7 +416,7 @@ export default function RpdView() {
                     <Input className={`h-9 w-36 text-right font-semibold ${overAmt ? "border-destructive" : ""}`} inputMode="decimal" placeholder={rp(vol * it.price)} value={amts[it.key] ?? ""} onChange={(e) => setAmts({ ...amts, [it.key]: e.target.value })} />
                   </label>
                   <span className="text-xs text-muted-foreground">otomatis ≈ {rp(vol * it.price)}</span>
-                  {terisi && !over && !overAmt && <span className="text-xs text-emerald-600">✓ siap ditambahkan</span>}
+                  {terisi && !over && !overAmt && <span className="text-xs text-success">✓ siap ditambahkan</span>}
                   {over && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {nfInt0(sisaVol)}</span>}
                   {overAmt && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {rp(sisaAmt)}</span>}
                 </div>
@@ -431,7 +434,7 @@ export default function RpdView() {
             const n = visible.filter((it) => (Number(vols[it.key]) || 0) > 0).length;
             const tot = visible.reduce((s, it) => s + ((Number(vols[it.key]) || 0) > 0 ? amtOf(it) : 0), 0);
             return (
-              <div className="sticky bottom-2 flex items-center justify-between gap-2 rounded-xl border bg-card/95 p-2.5 shadow-lg backdrop-blur">
+              <div className="sticky bottom-2 flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 shadow-lg">
                 <span className="text-xs text-muted-foreground">
                   {n ? `${n} item · ${rp(tot)}${bulan === "" ? " · tanpa bulan" : ` · ${BLN[Number(bulan)]}`}` : "Belum ada volume diisi"}
                   {adaLebih && " · ada yang melebihi sisa"}
@@ -445,7 +448,7 @@ export default function RpdView() {
 
       {/* Daftar rencana — tata letak seperti cetak, ramah dark mode */}
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Daftar kegiatan RPD — {rows.length} baris</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Daftar kegiatan RPD — {rows.length} baris</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
           {rows.length ? (
             <RpdPlanTable rows={rows} items={items} kegs={kegs} onChanged={reload} />
@@ -458,7 +461,7 @@ export default function RpdView() {
       {/* Ringkasan */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Per bulan</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Per bulan</CardTitle></CardHeader>
           <CardContent className="h-72 p-3">
             <ChartContainer config={{ rencana: { label: "Rencana", color: "var(--color-primary)" }, kumulatif: { label: "Kumulatif", color: "var(--color-accent-foreground)" } }}>
               <ComposedChart data={BLN.map((b, i) => ({ b, rencana: pm[i], kumulatif: pm.slice(0, i + 1).reduce((a, c) => a + c, 0) }))}>
@@ -473,22 +476,24 @@ export default function RpdView() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Sumber dana pada RPD aktif</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Sumber dana pada RPD aktif</CardTitle></CardHeader>
           <CardContent className="p-3 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-left text-xs text-muted-foreground"><th>Sumber dana</th><th className="num">Baris RPD</th><th className="num">Nominal RPD</th><th className="num">%</th></tr></thead>
+            <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-[13px]">
+              <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Sumber dana</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Baris RPD</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nominal RPD</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">%</th></tr></thead>
               <tbody>
                 {dana.map((d) => (
-                  <tr key={d.sd} className="border-t">
-                    <td className="py-1 pr-2">{d.sd}</td>
-                    <td className="num">{d.n.toLocaleString("id-ID")}</td>
-                    <td className="num">{rp(d.amt)}</td>
-                    <td className="num">{totA ? Math.round((d.amt / totA) * 100) : 0}%</td>
+                  <tr key={d.sd} className="border-t hover:bg-primary/5">
+                    <td className="h-11 px-3">{d.sd}</td>
+                    <td className="num h-11 px-3">{d.n.toLocaleString("id-ID")}</td>
+                    <td className="num h-11 px-3">{rp(d.amt)}</td>
+                    <td className="num h-11 px-3">{totA ? Math.round((d.amt / totA) * 100) : 0}%</td>
                   </tr>
                 ))}
                 {!dana.length && <tr><td colSpan={4} className="py-2 text-sm text-muted-foreground">Belum ada sumber dana yang masuk ke RPD aktif.</td></tr>}
               </tbody>
             </table>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -574,20 +579,20 @@ function RpdPlanTable({
         value={planSearch}
         onChange={(e) => setPlanSearch(e.target.value)}
       />
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse text-[13px]">
       <thead>
-        <tr className="bg-muted text-xs">
-          <th rowSpan={2} className="border px-2 py-1 text-center">NO</th>
-          <th rowSpan={2} className="border px-2 py-1 text-left">KODE</th>
-          <th rowSpan={2} className="border px-2 py-1 text-left">URAIAN</th>
-          <th colSpan={4} className="border px-2 py-1">RENCANA</th>
-          <th rowSpan={2} className="border px-2 py-1">AKSI</th>
+        <tr className="bg-muted">
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">No</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Kode</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Uraian</th>
+          <th colSpan={4} scope="col" className="h-10 border px-3 text-[13px] font-semibold">Rencana</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-[13px] font-semibold">Aksi</th>
         </tr>
-        <tr className="bg-muted text-xs">
-          <th className="border px-2 py-1">SUMBER DANA</th>
-          <th className="border px-2 py-1">VOLUME</th>
-          <th className="border px-2 py-1">HARGA SATUAN (Rp)</th>
-          <th className="border px-2 py-1">JUMLAH (Rp)</th>
+        <tr className="bg-muted">
+          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Sumber dana</th>
+          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Volume</th>
+          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Harga satuan (Rp)</th>
+          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Jumlah (Rp)</th>
         </tr>
       </thead>
       <tbody>
@@ -748,7 +753,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-lg font-semibold" title={value}>{value}</div>
+        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>

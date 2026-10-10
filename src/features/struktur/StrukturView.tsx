@@ -52,7 +52,12 @@ export default function StrukturView() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Struktur RAB</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Susunan anggaran per bidang, kegiatan, dan rincian.</p>
+      </div>
+      <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Basis {basis}. {rows.length.toLocaleString("id-ID")} item (mengikuti filter Dashboard).
@@ -108,6 +113,7 @@ export default function StrukturView() {
         </Node>
       ))}
       {!rows.length && <p className="text-sm text-muted-foreground">Tidak ada data untuk filter ini.</p>}
+      </div>
     </div>
   );
 }

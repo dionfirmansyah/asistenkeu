@@ -26,3 +26,17 @@ guard `PratinjauCetak` tanpa data, accessor tabel aman (SppDataView),
 8. **Konstanta tersebar** — `BASE`/`withTimeout`, nama DB, kunci localStorage
    (`asistenkeu_theme`, `*_pajak_v1`, `*_rekon_v2`) → `lib/constants.ts`.
 9. **`select` tanpa label** di `RekonView.tsx:163,171,177`.
+
+## Desain (DESIGN.md, status Okt 2026)
+
+Terapensial: token navy hex light+dark, header navy + garis emas + breadcrumb,
+sidebar `w-64` + bottom bar mobile, base Button/Input/Card/Dialog/Select,
+judul halaman + tabel 13px + badge `StatusBadge` di semua view, `rp` tanpa
+desimal, `tgl()` "10 Okt 2026".
+Deviasi tercatat (disengaja): warna kategorikal `DanaBadge`/donat (permintaan
+user eksplisit); `dark:` per elemen lawas tidak ditulis ulang; label form
+kompak `text-xs` tersisa di luar Rekon-detail & Kalkulator; padding header
+kartu tetap `p-3`; aksi primary tetap di kartu filter (satu penekanan per
+layar); `rupiah()` kwitansi + CSS print/excel tetap format dokumen resmi;
+Tabs/Toaster/RabView tak terpakai tak disentuh; `@fontsource-variable/geist`
+masih di package.json tapi tak diimpor lagi.

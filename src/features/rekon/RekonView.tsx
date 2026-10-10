@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ChevronRight, ChevronDown, Trash2 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const STORE = "asistenkeu_rekon_v2";
 interface Dana { id: string; nama: string; saldo: number }
@@ -130,9 +131,12 @@ export default function RekonView() {
       }
     };
     return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Rekonsiliasi Kas</h2>
+      <div className="space-y-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-primary">Rekonsiliasi kas</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Cocokkan saldo kas riil dengan saldo Siskeudes.</p>
+          </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => ioRef.current?.click()}>Impor JSON</Button>
             <input
@@ -167,7 +171,7 @@ export default function RekonView() {
                 <button type="button" onClick={() => { window.location.hash = `/rekon/${x.id}`; }} className="block w-full p-4 text-left">
                   <div className="font-semibold">{x.judul || "Rekonsiliasi"}</div>
                   <div className="mt-1 text-xs text-muted-foreground">Periode {x.periode || "-"} · {x.items.length} item</div>
-                  <div className={`mt-1 text-xs font-semibold ${selisih === 0 ? "text-emerald-600" : "text-destructive"}`}>{selisih === 0 ? "COCOK" : `Selisih ${rp(selisih)}`}</div>
+                  <div className="mt-2">{selisih === 0 ? <StatusBadge tone="success">Sesuai</StatusBadge> : <StatusBadge tone="destructive">Selisih {rp(selisih)}</StatusBadge>}</div>
                 </button>
                 <button type="button" title="Hapus rekonsiliasi" onClick={(e) => { e.stopPropagation(); if (window.confirm(`Hapus rekonsiliasi "${x.judul || "ini"}"?`)) setState({ ...state, list: state.list.filter((y) => y.id !== x.id) }); }} className="absolute right-3 top-3 rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10">Hapus</button>
               </div>
@@ -194,35 +198,39 @@ export default function RekonView() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => { window.location.hash = "/rekon"; }}>← Daftar rekonsiliasi</Button>
-        <b>{r.judul || "Rekonsiliasi"}</b>
-        <span className="ml-auto" />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            const payload = { tool: "asistenkeu-rekon-backup", version: 1, exportedAt: new Date().toISOString(), list: [r] };
-            const nama = (r.judul.trim() || r.id).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "rekon";
-            download(`rekon-${nama}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
-          }}
-        >
-          Ekspor JSON
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => { if (!window.confirm(`Hapus rekonsiliasi "${r.judul || "ini"}"?`)) return; setState({ ...state, list: state.list.filter((x) => x.id !== r.id) }); window.location.hash = "/rekon"; }}>Hapus</Button>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-primary">{r.judul || "Rekonsiliasi"}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Rincian penyesuaian dan ringkasan selisih kas.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { window.location.hash = "/rekon"; }}>Daftar rekonsiliasi</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const payload = { tool: "asistenkeu-rekon-backup", version: 1, exportedAt: new Date().toISOString(), list: [r] };
+              const nama = (r.judul.trim() || r.id).toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "rekon";
+              download(`rekon-${nama}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+            }}
+          >
+            Ekspor JSON
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => { if (!window.confirm(`Hapus rekonsiliasi "${r.judul || "ini"}"?`)) return; setState({ ...state, list: state.list.filter((x) => x.id !== r.id) }); window.location.hash = "/rekon"; }}>Hapus</Button>
+        </div>
       </div>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Identitas rekonsiliasi</CardTitle></CardHeader>
-        <CardContent className="grid gap-2 p-3 md:grid-cols-3">
-          <label className="text-xs">Judul<Input className="mt-1" value={r.judul} onChange={(e) => set({ judul: e.target.value })} /></label>
-          <label className="text-xs">Saldo BKU (Siskeudes)<MoneyInput className="mt-1" value={r.bku} onChange={(n) => set({ bku: n })} /></label>
-          <label className="text-xs">Tunai/brankas<MoneyInput className="mt-1" value={r.brankas} onChange={(n) => set({ brankas: n })} /></label>
+        <CardHeader className="p-3 pb-1"><CardTitle>Identitas rekonsiliasi</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 p-4 md:grid-cols-3 md:p-5">
+          <label className="text-sm font-medium">Judul<Input className="mt-1.5" value={r.judul} onChange={(e) => set({ judul: e.target.value })} /></label>
+          <label className="text-sm font-medium">Saldo BKU (Siskeudes)<MoneyInput className="mt-1.5" value={r.bku} onChange={(n) => set({ bku: n })} /></label>
+          <label className="text-sm font-medium">Tunai/brankas<MoneyInput className="mt-1.5" value={r.brankas} onChange={(n) => set({ brankas: n })} /></label>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Sumber dana lainnya</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Sumber dana lainnya</CardTitle></CardHeader>
         <CardContent className="space-y-2 p-3">
           <p className="text-xs text-muted-foreground">Kas di luar BKU/brankas — mis. dana talangan, titipan, atau kas tunai lain. Muncul sebagai pilihan di kolom “Mempengaruhi”.</p>
           {r.sumber.map((d) => (
@@ -238,9 +246,10 @@ export default function RekonView() {
       </Card>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Penyesuaian</CardTitle></CardHeader>
-        <CardContent className="p-3 overflow-x-auto">
-          <table className="w-full table-fixed text-sm">
+        <CardHeader className="p-3 pb-1"><CardTitle>Penyesuaian</CardTitle></CardHeader>
+        <CardContent className="overflow-x-auto p-4 md:p-5">
+          <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full table-fixed text-[13px]">
             <colgroup>
               <col className="w-52" />
               <col />
@@ -250,44 +259,44 @@ export default function RekonView() {
               <col className="w-10" />
             </colgroup>
             <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th>Jenis item</th>
-                <th>Uraian</th>
-                <th>Mempengaruhi</th>
-                <th>Arah</th>
-                <th className="num">Nilai</th>
-                <th />
+              <tr className="bg-muted text-left">
+                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Jenis item</th>
+                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Uraian</th>
+                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Mempengaruhi</th>
+                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Arah</th>
+                <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
+                <th scope="col" className="h-10 px-3" />
               </tr>
             </thead>
             <tbody>
               {r.items.map((i, idx) => {
                 const open = !!detailOpen[idx];
                 return (
-                <tr key={idx} className="border-t align-top">
-                  <td className="py-1 pr-1">
-                    <select className="h-8 w-full rounded border bg-background px-1 text-xs" value={i.jenis} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, jenis: e.target.value } : x)) })}>
+                <tr key={idx} className="border-b align-top hover:bg-primary/5">
+                  <td className="h-11 px-3 py-1">
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.jenis} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, jenis: e.target.value } : x)) })}>
                       {JENIS_ITEMS.map((j) => <option key={j} value={j}>{j}</option>)}
                     </select>
                   </td>
-                  <td className="py-1 pr-1">
+                  <td className="h-11 px-3 py-1">
                     <div className="flex items-center gap-1">
-                      <Input className="h-8 text-xs" value={i.uraian} placeholder="Uraian…" onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, uraian: e.target.value } : x)) })} />
+                      <Input className="h-8" value={i.uraian} placeholder="Uraian…" onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, uraian: e.target.value } : x)) })} />
                       <Button size="sm" variant="ghost" className="h-8 w-8 shrink-0 p-0" title={open ? "Sembunyikan keterangan" : "Tampilkan keterangan (bukti & tanggal)"} onClick={() => setDetailOpen((o) => ({ ...o, [idx]: !o[idx] }))}>
                         {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                       </Button>
                     </div>
                     {!open && (i.bukti || i.tglItem) && (
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">{[i.bukti, i.tglItem].filter(Boolean).join(" · ")}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{[i.bukti, i.tglItem].filter(Boolean).join(" · ")}</div>
                     )}
                     {open && (
                       <div className="mt-1 grid grid-cols-2 gap-1">
-                        <Input className="h-8 text-xs" value={i.bukti} placeholder="No bukti (SPP-03/…)" onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, bukti: e.target.value } : x)) })} />
-                        <Input className="h-8 text-xs" type="date" value={i.tglItem} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, tglItem: e.target.value } : x)) })} />
+                        <Input className="h-8" value={i.bukti} placeholder="No bukti (SPP-03/…)" onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, bukti: e.target.value } : x)) })} />
+                        <Input className="h-8" type="date" value={i.tglItem} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, tglItem: e.target.value } : x)) })} />
                       </div>
                     )}
                   </td>
-                  <td className="py-1 pr-1">
-                    <select className="h-8 w-full rounded border bg-background px-1 text-xs" value={i.sisi === SISI_BKU || i.sisi === SISI_FISIK || r.sumber.some((d) => d.id === i.sisi) ? i.sisi : "__hilang__"} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, sisi: e.target.value } : x)) })}>
+                  <td className="h-11 px-3 py-1">
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.sisi === SISI_BKU || i.sisi === SISI_FISIK || r.sumber.some((d) => d.id === i.sisi) ? i.sisi : "__hilang__"} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, sisi: e.target.value } : x)) })}>
                       <option value={SISI_BKU}>Kas Siskeudes</option>
                       <option value={SISI_FISIK}>Kas Bendahara</option>
                       {r.sumber.map((d) => <option key={d.id} value={d.id}>{d.nama.trim() || "(tanpa nama)"}</option>)}
@@ -296,24 +305,25 @@ export default function RekonView() {
                       )}
                     </select>
                   </td>
-                  <td className="py-1 pr-1">
-                    <select className="h-8 w-full rounded border bg-background px-1 text-xs" value={i.arah} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, arah: e.target.value as Item["arah"] } : x)) })}>
+                  <td className="h-11 px-3 py-1">
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.arah} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, arah: e.target.value as Item["arah"] } : x)) })}>
                       <option value="+">Menambah (+)</option>
                       <option value="-">Mengurangi (−)</option>
                     </select>
                   </td>
-                  <td className="py-1 pr-1"><MoneyInput className="h-8 w-full text-right text-xs" value={i.nilai} onChange={(n) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, nilai: n } : x)) })} /></td>
-                  <td className="py-1 pr-1"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" title="Hapus baris" onClick={() => set({ items: r.items.filter((_, j) => j !== idx) })}><Trash2 className="size-4" /></Button></td>
+                  <td className="h-11 px-3 py-1"><MoneyInput className="h-8 w-full text-right" value={i.nilai} onChange={(n) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, nilai: n } : x)) })} /></td>
+                  <td className="h-11 px-3 py-1"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" title="Hapus baris" aria-label="Hapus baris" onClick={() => set({ items: r.items.filter((_, j) => j !== idx) })}><Trash2 className="size-4" /></Button></td>
                 </tr>
                 );
               })}
-              {!r.items.length && <tr><td colSpan={6} className="py-2 text-center text-xs text-muted-foreground">Belum ada penyesuaian.</td></tr>}
-              <tr className="border-t font-semibold">
-                <td colSpan={4} className="pt-1 text-right text-xs text-muted-foreground">Penyesuaian BKU: {rp(adjBku)} · Penyesuaian fisik: {rp(adjFisik)}</td>
-                <td className="num pt-1"></td><td />
+              {!r.items.length && <tr><td colSpan={6} className="py-3 text-center text-sm text-muted-foreground">Belum ada penyesuaian.</td></tr>}
+              <tr className="border-t bg-muted font-semibold">
+                <td colSpan={4} className="h-11 px-3 text-right text-xs text-muted-foreground">Penyesuaian BKU: {rp(adjBku)} · Penyesuaian fisik: {rp(adjFisik)}</td>
+                <td className="num h-11 px-3"></td><td />
               </tr>
             </tbody>
           </table>
+          </div>
           <div className="mt-2 flex gap-2">
             <Button size="sm" variant="outline" onClick={() => set({ items: [...r.items, { jenis: JENIS_ITEMS[0], uraian: "", bukti: "", tglItem: "", nilai: 0, sisi: SISI_FISIK, arah: "+" }] })}>+ Baris penyesuaian</Button>
             {r.items.length > 0 && <Button size="sm" variant="outline" onClick={() => window.confirm("Hapus semua penyesuaian?") && set({ items: [] })}>Hapus semua</Button>}
@@ -322,7 +332,7 @@ export default function RekonView() {
       </Card>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Ringkasan</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Ringkasan</CardTitle></CardHeader>
         <CardContent className="p-3">
           <table className="w-full text-sm">
             <tbody>
@@ -352,7 +362,7 @@ export default function RekonView() {
               </tr>
               <tr className="font-semibold">
                 <td className="py-1.5">Selisih</td>
-                <td className={`num py-1.5 ${selisih === 0 ? "text-emerald-600" : "text-destructive"}`}>{selisih === 0 ? "COCOK" : rp(selisih)}</td>
+                <td className="num py-1.5">{selisih === 0 ? <StatusBadge tone="success">Sesuai</StatusBadge> : <StatusBadge tone="destructive">Selisih {rp(selisih)}</StatusBadge>}</td>
               </tr>
             </tbody>
           </table>

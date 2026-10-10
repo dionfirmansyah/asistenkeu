@@ -53,9 +53,13 @@ export default function DashboardView() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Dashboard</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Ringkasan keuangan desa dari file Siskeudes.</p>
+      </div>
       {/* Identitas desa */}
       <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/15 via-primary/5 to-transparent p-4">
+        <div className="border-b bg-muted/40 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold">Desa {ident.desa || "-"}</h1>
@@ -79,7 +83,7 @@ export default function DashboardView() {
             const opts = cascadeOptions(flat, values, F.id);
             return (
               <label key={F.id} className="block space-y-1 text-xs font-medium text-muted-foreground">
-                <span className="uppercase tracking-wide">{F.label.replace(/^Semua\s+/i, "")}</span>
+                <span>{F.label.replace(/^Semua\s+/i, "")}</span>
                 <Select value={values[F.id] === "" || values[F.id] === undefined ? undefined : values[F.id]} onValueChange={(v: string | null) => set(F.id, !v || v === "__all__" || v === "__empty__" ? "" : v)}>
                   <SelectTrigger className="h-9 w-full">
                     <SelectValue placeholder={F.label} />
@@ -97,7 +101,7 @@ export default function DashboardView() {
             );
           })}
           <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-            <span className="uppercase tracking-wide">Cari</span>
+            <span>Cari</span>
             <Input className="h-9 w-full text-sm" placeholder="Ketik kata kunci…" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
         </CardContent>
@@ -106,7 +110,7 @@ export default function DashboardView() {
             {rows.length.toLocaleString("id-ID")} dari {flat.length.toLocaleString("id-ID")} baris
           </span>
           <div className="flex items-center gap-2">
-            <span className="uppercase tracking-wide">Basis</span>
+            <span>Basis</span>
             <div className="flex gap-1">
               {(Object.keys(BASIS_LABEL) as Basis[]).map((k) => (
                 <Button key={k} size="sm" variant={b === k ? "default" : "outline"} className="h-7 text-xs" onClick={() => setBasis(k)}>
@@ -137,7 +141,7 @@ export default function DashboardView() {
 
       {/* Perubahan */}
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Perubahan anggaran</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Perubahan anggaran</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-3 gap-2 p-3 text-sm">
           <div className="rounded-md border bg-muted/40 p-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers className="size-3.5" />Semula</div>
@@ -148,8 +152,8 @@ export default function DashboardView() {
             <div className="mt-1 font-semibold">{rp(menjadi)}</div>
           </div>
           <div className="rounded-md border bg-muted/40 p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{delta >= 0 ? <TrendingUp className="size-3.5 text-emerald-600" /> : <TrendingDown className="size-3.5 text-destructive" />}Bertambah / (berkurang)</div>
-            <div className={`mt-1 font-semibold ${delta >= 0 ? "text-emerald-600" : "text-destructive"}`}>{rpS(delta)}</div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{delta >= 0 ? <TrendingUp className="size-3.5 text-success" /> : <TrendingDown className="size-3.5 text-destructive" />}Bertambah / (berkurang)</div>
+            <div className={`mt-1 font-semibold ${delta >= 0 ? "text-success" : "text-destructive"}`}>{rpS(delta)}</div>
           </div>
         </CardContent>
       </Card>
@@ -157,7 +161,7 @@ export default function DashboardView() {
       {/* Grafik */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Belanja per PPTKD</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Belanja per PPTKD</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ChartContainer config={{ total: { label: "Total", color: "var(--color-primary)" } }}>
               <BarChart data={pp} layout="vertical" margin={{ left: 90 }}>
@@ -171,7 +175,7 @@ export default function DashboardView() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Komposisi sumber dana (belanja)</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Komposisi sumber dana (belanja)</CardTitle></CardHeader>
           <CardContent className="p-3">
             <div className="relative mx-auto h-52 w-full max-w-64">
               <ChartContainer config={{}} className="h-full w-full">
@@ -220,7 +224,7 @@ export default function DashboardView() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Anggaran per bidang</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Anggaran per bidang</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ChartContainer config={{ total: { label: "Total", color: "var(--color-primary)" } }}>
               <BarChart data={bid.map((x) => ({ ...x, name: x.name.replace(/^BIDANG\s+/i, "") }))} layout="vertical" margin={{ left: 90 }}>
@@ -234,7 +238,7 @@ export default function DashboardView() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Pendapatan / Belanja / Pembiayaan</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Pendapatan / Belanja / Pembiayaan</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ChartContainer config={{ semula: { label: "Semula", color: "var(--color-muted-foreground)" }, perubahan: { label: "Perubahan", color: "var(--color-accent-foreground)" }, menjadi: { label: "Menjadi", color: "var(--color-primary)" } }}>
               <BarChart data={jenis}>
@@ -254,13 +258,13 @@ export default function DashboardView() {
       {/* Tabel ringkasan sumber dana & PPTKD */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Sumber dana (belanja)</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>Sumber dana (belanja)</CardTitle></CardHeader>
           <CardContent className="p-3 overflow-x-auto">
             <GroupTable rows={belanja} field="SumberDana" basis={b} />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">PPTKD</CardTitle></CardHeader>
+          <CardHeader className="p-3 pb-1"><CardTitle>PPTKD</CardTitle></CardHeader>
           <CardContent className="p-3 overflow-x-auto">
             <GroupTable rows={rows.filter((r) => r.Nm_PPTKD)} field="Nm_PPTKD" basis={b} />
           </CardContent>
@@ -269,46 +273,50 @@ export default function DashboardView() {
 
       {/* Top belanja */}
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">10 belanja terbesar</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>10 belanja terbesar</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th>Kegiatan</th><th>Rincian</th><th className="num">Semula</th><th className="num">Perubahan</th><th className="num">Menjadi</th>
+              <tr className="bg-muted text-left">
+                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Rincian</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Semula</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Perubahan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Menjadi</th>
               </tr>
             </thead>
             <tbody>
               {top.map((r) => (
-                <tr key={r._id} className="border-t">
-                  <td className="py-1 pr-2">{r.Nama_Kegiatan}</td>
-                  <td className="py-1 pr-2">{r.Nama_Rincian_Label} {r.Asal === "SILPA" && <Badge variant="secondary">SiLPA</Badge>}</td>
-                  <td className="num">{rp(r.Anggaran)}</td>
-                  <td className="num">{rpS(r.AnggaranPAK)}</td>
-                  <td className="num">{rp(r.AnggaranStlhPAK)}</td>
+                <tr key={r._id} className="border-t hover:bg-primary/5">
+                  <td className="h-11 px-3">{r.Nama_Kegiatan}</td>
+                  <td className="h-11 px-3">{r.Nama_Rincian_Label} {r.Asal === "SILPA" && <Badge variant="secondary">SiLPA</Badge>}</td>
+                  <td className="num h-11 px-3">{rp(r.Anggaran)}</td>
+                  <td className="num h-11 px-3">{rpS(r.AnggaranPAK)}</td>
+                  <td className="num h-11 px-3">{rp(r.AnggaranStlhPAK)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Perubahan kegiatan */}
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Kegiatan dengan perubahan terbesar</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Kegiatan dengan perubahan terbesar</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs text-muted-foreground"><th>Kegiatan</th><th className="num">Semula</th><th className="num">Menjadi</th><th className="num">Δ</th></tr></thead>
+          <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-[13px]">
+            <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Semula</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Menjadi</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Selisih</th></tr></thead>
             <tbody>
               {changes.map((x) => (
-                <tr key={x.name} className="border-t">
-                  <td className="py-1 pr-2">{x.name}</td>
-                  <td className="num">{rp(x.semula)}</td>
-                  <td className="num">{rp(x.menjadi)}</td>
-                  <td className={`num ${x.delta >= 0 ? "text-emerald-600" : "text-destructive"}`}>{rpS(x.delta)}</td>
+                <tr key={x.name} className="border-t hover:bg-primary/5">
+                  <td className="h-11 px-3">{x.name}</td>
+                  <td className="num h-11 px-3">{rp(x.semula)}</td>
+                  <td className="num h-11 px-3">{rp(x.menjadi)}</td>
+                  <td className={`num h-11 px-3 ${x.delta >= 0 ? "text-success" : "text-destructive"}`}>{rpS(x.delta)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -323,7 +331,7 @@ function Kpi({ label, value, sub, icon: Icon }: { label: string; value: string; 
           <div className="text-xs text-muted-foreground">{label}</div>
           {Icon && <Icon className="size-4 text-primary" />}
         </div>
-        <div className="truncate text-lg font-semibold" title={value}>{value}</div>
+        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>
@@ -334,21 +342,23 @@ function GroupTable({ rows, field, basis }: { rows: Parameters<typeof aggregate>
   const agg = aggregate(rows, field, basis).filter((x) => x.name);
   const tot = agg.reduce((s, x) => s + x.total, 0);
   return (
-    <table className="w-full text-sm">
-      <thead><tr className="text-left text-xs text-muted-foreground"><th>{field === "SumberDana" ? "Sumber dana" : "PPTKD"}</th><th className="num">Rincian</th><th className="num">Kegiatan</th><th className="num">Total</th><th className="num">%</th></tr></thead>
+    <div className="overflow-x-auto rounded-lg border">
+    <table className="w-full text-[13px]">
+      <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">{field === "SumberDana" ? "Sumber dana" : "PPTKD"}</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Rincian</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Total</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">%</th></tr></thead>
       <tbody>
         {agg.map((x) => (
-          <tr key={x.name} className="border-t">
-            <td className="py-1 pr-2">{field === "SumberDana" ? <DanaBadge value={x.name} /> : x.name}</td>
-            <td className="num">{nfInt0(x.nRincian)}</td>
-            <td className="num">{nfInt0(x.nKeg)}</td>
-            <td className="num">{rp(x.total)}</td>
-            <td className="num">{tot ? Math.round((Math.abs(x.total) / Math.abs(tot)) * 100) : 0}%</td>
+          <tr key={x.name} className="border-t hover:bg-primary/5">
+            <td className="h-11 px-3">{field === "SumberDana" ? <DanaBadge value={x.name} /> : x.name}</td>
+            <td className="num h-11 px-3">{nfInt0(x.nRincian)}</td>
+            <td className="num h-11 px-3">{nfInt0(x.nKeg)}</td>
+            <td className="num h-11 px-3">{rp(x.total)}</td>
+            <td className="num h-11 px-3">{tot ? Math.round((Math.abs(x.total) / Math.abs(tot)) * 100) : 0}%</td>
           </tr>
         ))}
-        <tr className="border-t font-semibold"><td>Total</td><td className="num"></td><td className="num"></td><td className="num">{rp(tot)}</td><td className="num">100%</td></tr>
+        <tr className="border-t bg-muted font-semibold"><td className="h-11 px-3">Total</td><td className="num h-11 px-3"></td><td className="num h-11 px-3"></td><td className="num h-11 px-3">{rp(tot)}</td><td className="num h-11 px-3">100%</td></tr>
       </tbody>
     </table>
+    </div>
   );
 }
 

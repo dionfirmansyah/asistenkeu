@@ -5,6 +5,7 @@ import { nfInt0, rp } from "@/lib/engine/format";
 import { toCSV, download } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { DanaBadge } from "@/components/ui/dana-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,6 +111,10 @@ export default function SisaView() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Sisa anggaran</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Pagu yang belum direncanakan dalam RPD.</p>
+      </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Kpi label="Total sisa anggaran" value={rp(totSisa)} sub={`${filtered.length.toLocaleString("id-ID")} item`} />
         <Kpi label="Pagu RAB (sesudah PAK)" value={rp(totRab)} sub="pada item yang masih sisa" />
@@ -118,7 +123,7 @@ export default function SisaView() {
       </div>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Filter</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Filter</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-2 p-3">
           <Select value={asal} onValueChange={(v) => setAsal(v === "_all" ? "" : v ?? "")}>
             <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="Semua asal" /></SelectTrigger>
@@ -148,41 +153,43 @@ export default function SisaView() {
       </Card>
 
       <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Daftar sisa anggaran ({filtered.length})</CardTitle></CardHeader>
+        <CardHeader className="p-3 pb-1"><CardTitle>Daftar sisa anggaran ({filtered.length})</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+          <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr className="bg-muted text-xs">
-                <th className="border px-2 py-1 text-left">KEGIATAN</th>
-                <th className="border px-2 py-1 text-left">RINCIAN</th>
-                <th className="border px-2 py-1 text-left">URAIAN</th>
-                <th className="border px-2 py-1 text-left">SUMBER DANA</th>
-                <th className="border px-2 py-1 text-left">ASAL</th>
-                <th className="border px-2 py-1 text-center">VOLUME SISA</th>
-                <th className="border px-2 py-1 text-right">PAGU (Rp)</th>
-                <th className="border px-2 py-1 text-right">RENCANA (Rp)</th>
-                <th className="border px-2 py-1 text-right">SISA (Rp)</th>
-                <th className="border px-2 py-1 text-center">STATUS</th>
+              <tr className="bg-muted">
+                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Kegiatan</th>
+                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Rincian</th>
+                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Uraian</th>
+                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Sumber dana</th>
+                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Asal</th>
+                <th scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">Volume sisa</th>
+                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Pagu (Rp)</th>
+                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Rencana (Rp)</th>
+                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Sisa (Rp)</th>
+                <th scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((x, i) => (
-                <tr key={i} className="align-top">
-                  <td className="border px-2 py-1 text-xs">{x.kegKd}</td>
-                  <td className="border px-2 py-1">{x.r.Nama_Rincian}</td>
-                  <td className="border px-2 py-1">{x.r.Uraian}</td>
-                  <td className="border px-2 py-1 text-xs"><DanaBadge value={x.r.SumberDana} /></td>
-                  <td className="border px-2 py-1 text-xs">{x.asal === "SILPA" ? "Dana SiLPA" : "RAB awal"}</td>
-                  <td className="border px-2 py-1 text-center">{nfInt0(x.sisaVol)} {x.r.Satuan}</td>
-                  <td className="border px-2 py-1 num">{rp(x.r.AnggaranStlhPAK)}</td>
-                  <td className="border px-2 py-1 num">{rp(x.usedAmt)}</td>
-                  <td className="border px-2 py-1 num">{rp(x.sisaAmt)}</td>
-                  <td className="border px-2 py-1 text-center text-xs">{x.status === "none" ? "Belum direncanakan" : x.status === "partial" ? "Sebagian" : "Selesai"}</td>
+                <tr key={i} className="align-top hover:bg-primary/5">
+                  <td className="h-11 border px-3 text-xs font-medium">{x.kegKd}</td>
+                  <td className="h-11 border px-3">{x.r.Nama_Rincian}</td>
+                  <td className="h-11 border px-3">{x.r.Uraian}</td>
+                  <td className="h-11 border px-3 text-xs"><DanaBadge value={x.r.SumberDana} /></td>
+                  <td className="h-11 border px-3 text-xs">{x.asal === "SILPA" ? "Dana SiLPA" : "RAB awal"}</td>
+                  <td className="h-11 border px-3 text-center">{nfInt0(x.sisaVol)} {x.r.Satuan}</td>
+                  <td className="h-11 border px-3 num">{rp(x.r.AnggaranStlhPAK)}</td>
+                  <td className="h-11 border px-3 num">{rp(x.usedAmt)}</td>
+                  <td className="h-11 border px-3 num">{rp(x.sisaAmt)}</td>
+                  <td className="h-11 border px-3 text-center text-xs">{x.status === "none" ? <StatusBadge tone="warning">Belum direncanakan</StatusBadge> : x.status === "partial" ? <StatusBadge tone="info">Sebagian</StatusBadge> : <StatusBadge tone="success">Selesai</StatusBadge>}</td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={10} className="border px-2 py-3 text-center text-sm text-muted-foreground">Tidak ada sisa anggaran — semua item sudah direncanakan.</td></tr>}
+              {!filtered.length && <tr><td colSpan={10} className="border px-3 py-3 text-center text-sm text-muted-foreground">Tidak ada sisa anggaran — semua item sudah direncanakan.</td></tr>}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -194,7 +201,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-lg font-semibold" title={value}>{value}</div>
+        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>

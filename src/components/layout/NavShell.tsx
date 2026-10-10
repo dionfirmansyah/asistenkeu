@@ -16,51 +16,49 @@ import { idb, peekCache } from "@/lib/storage/idb";
 import { readSppFile } from "@/lib/sppFile";
 import { readPajakFile } from "@/lib/pajakFile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
-  ClipboardList, Database, FileText, FolderTree, LayoutDashboard, Percent, Receipt, ReceiptText, Scale, ShieldCheck, Table2, Wallet,
+  ClipboardList, Database, FileText, FolderTree, LayoutDashboard, LayoutGrid, Percent, Receipt, ReceiptText, Scale, ShieldCheck, Table2, Wallet,
 } from "lucide-react";
 
-const SECTIONS: Array<{ title: string; items: Array<{ id: string; label: string; icon: typeof LayoutDashboard }> }> = [
+export const SECTIONS: Array<{ title: string; items: Array<{ id: string; label: string; icon: typeof LayoutDashboard }> }> = [
   {
-    title: "UTAMA",
+    title: "Utama",
     items: [{ id: "dashboard", label: "Dashboard", icon: LayoutDashboard }],
   },
   {
-    title: "RENCANA ANGGARAN",
+    title: "Rencana anggaran",
     items: [
       { id: "struktur", label: "Struktur RAB", icon: FolderTree },
     ],
   },
   {
-    title: "PELAKSANAAN",
+    title: "Pelaksanaan",
     items: [
-      { id: "rpd", label: "Rencana Penggunaan", icon: ClipboardList },
-      { id: "sisa", label: "Sisa Anggaran", icon: Wallet },
+      { id: "rpd", label: "Rencana penggunaan", icon: ClipboardList },
+      { id: "sisa", label: "Sisa anggaran", icon: Wallet },
       { id: "spp", label: "Register SPP", icon: ReceiptText },
-      { id: "rekap-pajak", label: "Rekap Pajak", icon: Receipt },
+      { id: "rekap-pajak", label: "Rekap pajak", icon: Receipt },
     ],
   },
   {
-    title: "ALAT BANTU",
+    title: "Alat bantu",
     items: [
-      { id: "pajak", label: "Kalkulator Pajak", icon: Percent },
-      { id: "rekon", label: "Rekonsiliasi Kas", icon: Scale },
+      { id: "pajak", label: "Kalkulator pajak", icon: Percent },
+      { id: "rekon", label: "Rekonsiliasi kas", icon: Scale },
     ],
   },
   {
-    title: "ANALISIS",
-    items: [{ id: "validasi", label: "Validasi Data", icon: ShieldCheck }],
+    title: "Analisis",
+    items: [{ id: "validasi", label: "Validasi data", icon: ShieldCheck }],
   },
   {
-    title: "DATA TEKNIS",
+    title: "Data teknis",
     items: [
-      { id: "raw", label: "Data Database", icon: Database },
-      { id: "spp-data", label: "Data Register SPP", icon: Table2 },
-      { id: "data-pajak", label: "Data Pajak", icon: FileText },
+      { id: "raw", label: "Data database", icon: Database },
+      { id: "spp-data", label: "Data register SPP", icon: Table2 },
+      { id: "data-pajak", label: "Data pajak", icon: FileText },
     ],
   },
 ];
@@ -139,79 +137,63 @@ export default function NavShell() {
   };
 
   const allItems = SECTIONS.flatMap((s) => s.items);
+  const QUICK_IDS = ["dashboard", "rpd", "spp", "rekap-pajak"];
+  const quickItems = QUICK_IDS.flatMap((id) => {
+    const it = allItems.find((i) => i.id === id);
+    return it ? [it] : [];
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex w-full flex-col gap-4 md:flex-row">
-      {/* Navigasi mobile: deretan tombol shadcn */}
-      <div className="flex gap-1 overflow-x-auto pb-1 md:hidden" aria-label="Navigasi aplikasi">
-        {allItems.map((it) => (
-          <Button
-            key={it.id}
-            size="sm"
-            variant={active === it.id ? "default" : "outline"}
-            className="shrink-0 rounded-full"
-            aria-current={active === it.id ? "page" : undefined}
-            onClick={() => go(it.id)}
-          >
-            <it.icon />
-            {it.label}
-          </Button>
-        ))}
-      </div>
+    <div className="flex w-full flex-col md:flex-row">
+      {/* Sidebar desktop */}
+      <aside className="hidden w-64 shrink-0 border-r bg-card md:block">
+        <div className="sticky top-[var(--header-h)] flex h-[calc(100vh-var(--header-h))] flex-col">
+          <ScrollArea className="min-h-0 flex-1">
+            <nav aria-label="Navigasi aplikasi" className="px-2 py-2">
+              {SECTIONS.map((s) => (
+                <div key={s.title}>
+                  <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">{s.title}</div>
+                  {s.items.map((it) => {
+                    const isActive = active === it.id;
+                    return (
+                      <Button
+                        key={it.id}
+                        variant="ghost"
+                        className={`relative h-10 w-full items-center justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-primary hover:bg-accent hover:text-primary" : "text-foreground/80 hover:bg-accent"}`}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => go(it.id)}
+                      >
+                        {isActive && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-primary" />}
+                        <it.icon className="size-5 shrink-0" />
+                        <span className="truncate">{it.label}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+          </ScrollArea>
 
-      {/* Sidebar desktop dari komponen shadcn */}
-      <aside className="hidden w-60 shrink-0 md:block">
-        <div className="sticky top-20 flex h-[calc(100vh-5.5rem)] flex-col gap-3">
-          <Card className="flex min-h-0 flex-col py-2">
-            <ScrollArea className="min-h-0 flex-1">
-              <nav aria-label="Navigasi aplikasi" className="space-y-3 px-2 py-1">
-                {SECTIONS.map((s, si) => (
-                  <div key={s.title}>
-                    {si > 0 && <Separator className="mb-3" />}
-                    <div className="mb-1 px-2 text-xs font-semibold tracking-wide text-muted-foreground">{s.title}</div>
-                    <div className="space-y-0.5">
-                      {s.items.map((it) => {
-                        const isActive = active === it.id;
-                        return (
-                          <Button
-                            key={it.id}
-                            variant="ghost"
-                            className={`w-full justify-start ${isActive ? "bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary" : ""}`}
-                            aria-current={isActive ? "page" : undefined}
-                            onClick={() => go(it.id)}
-                          >
-                            <it.icon />
-                            <span className="truncate">{it.label}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </nav>
-            </ScrollArea>
-          </Card>
-
-          <Card className="shrink-0">
-            <CardContent className="space-y-2 p-3">
-              <div className="text-[11px] font-semibold tracking-wide text-muted-foreground">FILE AKTIF</div>
-              <FileRow
-                label="RAB (Siskeudes)"
-                name={fileName}
-                inputRef={rabRef}
-                onPick={gantiRab}
-              >
-                {fileName && <Badge variant="secondary" className="text-[10px]">{flat.length.toLocaleString("id-ID")} baris RAB</Badge>}
-              </FileRow>
-              <FileRow label="SPP" name={sppName} inputRef={sppRef} onPick={gantiSpp} />
-              <FileRow label="PAJAK" name={pajakName} inputRef={pajakRef} onPick={gantiPajak} />
-              {fileMsg && <div className="text-[11px] text-muted-foreground">{fileMsg}</div>}
-            </CardContent>
-          </Card>
+          <div className="shrink-0 space-y-2 border-t p-3">
+            <div className="text-xs font-medium text-muted-foreground">File aktif</div>
+            <FileRow
+              label="RAB (Siskeudes)"
+              name={fileName}
+              inputRef={rabRef}
+              onPick={gantiRab}
+            >
+              {fileName && <Badge variant="secondary" className="text-[10px]">{flat.length.toLocaleString("id-ID")} baris RAB</Badge>}
+            </FileRow>
+            <FileRow label="SPP" name={sppName} inputRef={sppRef} onPick={gantiSpp} />
+            <FileRow label="Pajak" name={pajakName} inputRef={pajakRef} onPick={gantiPajak} />
+            {fileMsg && <div className="text-[11px] text-muted-foreground">{fileMsg}</div>}
+          </div>
         </div>
       </aside>
 
-      <section key={fileBump} className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 px-4 pb-24 pt-4 md:px-6 md:pb-6">
+      <section key={fileBump}>
         {active === "dashboard" ? (
           <DashboardView />
         ) : active === "struktur" ? (
@@ -243,6 +225,55 @@ export default function NavShell() {
           </div>
         )}
       </section>
+      </div>
+
+      {/* Bottom bar mobile */}
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Navigasi aplikasi">
+        {menuOpen && (
+          <div className="grid max-h-72 grid-cols-2 gap-1 overflow-y-auto border-b p-2">
+            {allItems.map((it) => {
+              const isActive = active === it.id;
+              return (
+                <Button
+                  key={it.id}
+                  variant="ghost"
+                  className={`h-10 justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-primary" : "text-foreground/80"}`}
+                  onClick={() => { setMenuOpen(false); go(it.id); }}
+                >
+                  <it.icon className="size-5 shrink-0" />
+                  <span className="truncate">{it.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        )}
+        <div className="grid h-16 grid-cols-5">
+          {quickItems.map((it) => {
+            const isActive = active === it.id;
+            return (
+              <button
+                key={it.id}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => go(it.id)}
+                className={`flex min-h-10 flex-col items-center justify-center gap-1 ${isActive ? "font-medium text-primary" : "text-muted-foreground"}`}
+              >
+                <it.icon className="size-5" />
+                <span className="px-0.5 text-center text-[11px] leading-tight">{it.label}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+            className={`flex min-h-10 flex-col items-center justify-center gap-1 ${menuOpen ? "font-medium text-primary" : "text-muted-foreground"}`}
+          >
+            <LayoutGrid className="size-5" />
+            <span className="text-[11px] leading-tight">Menu</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

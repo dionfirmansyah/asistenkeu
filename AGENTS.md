@@ -2,6 +2,10 @@
 
 Offline-first React + TS app (Vite 8, React 19): analyzes Siskeudes `.SMD` files fully in-browser. No backend; persistence is IndexedDB (`smd-rpd-db`) + small localStorage state.
 
+## Sumber kebenaran visual
+
+`.opencode/skills/kode-rapi/references/DESIGN.md` — sistem desain gaya portal Coretax (navy `#0e3d85`, aksen emas hanya garis header). Token di `src/index.css` (hex, light+dark, termasuk `success/warning/info` + varian `-soft`, `brand-*`, `gold`, `--header-h`). Aturan keras: sentence case (akronim tetap kapital), radius hanya 6px kontrol / 8px panel, tanpa `backdrop-blur`/gradien dekoratif/`rounded-xl+`, angka `tabular-nums` + `Rp` tanpa desimal, tanggal `tgl()` ("10 Okt 2026"), badge status `StatusBadge` (dot + teks).
+
 ## Sebelum menulis kode (wajib)
 
 Muat skill `kode-rapi` (`skill` tool, id `kode-rapi`) dan patuhi

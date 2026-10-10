@@ -3,7 +3,7 @@ import { useSmdStore } from "@/stores/smd-store";
 import { idb, idbAll, bustCache, peekCache, rememberCache, type PajakManual } from "@/lib/storage/idb";
 import { readSppFile, type SppRec } from "@/lib/sppFile";
 import { vt } from "@/lib/engine/util";
-import { rp } from "@/lib/engine/format";
+import { rp, tgl } from "@/lib/engine/format";
 import { download } from "@/lib/csv";
 import { downloadBase64, patchSpp, serverStatus } from "@/lib/sppServer";
 import { writeJsonToFolder } from "@/lib/storage/fsdir";
@@ -18,10 +18,6 @@ import { Printer, Wallet } from "lucide-react";
 import type { KwitansiData } from "@/features/kwitansi";
 import type { Row } from "@/types/smd";
 
-const tglID = (v: unknown) => {
-  const d = vt(v);
-  return d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "";
-};
 const linkOf = (v: unknown) => {
   const t = vt(v).replace(/^tps:\/\//i, "https://");
   const m = /https?:\/\/[^\s#]+/i.exec(t);
@@ -304,6 +300,10 @@ export default function SppView() {
 
   return (
     <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Register SPP</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Surat permintaan pembayaran dan kwitansi dari file SPP Siskeudes.</p>
+      </div>
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
           <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
@@ -344,10 +344,10 @@ export default function SppView() {
         <>
           {/* KPI ringkasan */}
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total nominal SPP</div><div className="truncate text-lg font-semibold" title={rp(totalJumlah)}>{rp(totalJumlah)}</div><div className="text-xs text-muted-foreground">{list.length} SPP</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total SPP</div><div className="text-lg font-semibold">{list.length.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">dari {spp.reg.length.toLocaleString("id-ID")} di file</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total kwitansi</div><div className="text-lg font-semibold">{totalKwitansi.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">SPPBukti</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total pajak</div><div className="truncate text-lg font-semibold" title={rp(totalPajak)}>{rp(totalPajak)}</div><div className="text-xs text-muted-foreground">potongan</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total nominal SPP</div><div className="truncate text-2xl font-semibold tabular-nums" title={rp(totalJumlah)}>{rp(totalJumlah)}</div><div className="text-xs text-muted-foreground">{list.length} SPP</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total SPP</div><div className="text-2xl font-semibold tabular-nums">{list.length.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">dari {spp.reg.length.toLocaleString("id-ID")} di file</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total kwitansi</div><div className="text-2xl font-semibold tabular-nums">{totalKwitansi.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">SPPBukti</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total pajak</div><div className="truncate text-2xl font-semibold tabular-nums" title={rp(totalPajak)}>{rp(totalPajak)}</div><div className="text-xs text-muted-foreground">potongan</div></CardContent></Card>
           </div>
 
           {/* Nominal per sumber dana */}
@@ -355,7 +355,7 @@ export default function SppView() {
   <Card className="overflow-hidden">
     <CardHeader className="border-b bg-muted/30 px-4 py-3">
       <CardTitle className="text-sm font-semibold">
-        Nominal per Sumber Dana
+        Nominal per sumber dana
       </CardTitle>
     </CardHeader>
 
@@ -364,7 +364,7 @@ export default function SppView() {
         {nominalPerDana.map(([sd, v]) => (
           <div
             key={sd}
-            className="group rounded-xl border bg-background p-4 transition-all hover:border-primary/30 hover:bg-muted/30"
+            className="group rounded-lg border bg-background p-4 transition-all hover:border-primary/30 hover:bg-muted/30"
           >
             <div className="mb-2 flex items-center gap-2">
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -388,28 +388,28 @@ export default function SppView() {
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-              <span className="uppercase tracking-wide">Sumber dana</span>
+              <span>Sumber dana</span>
               <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={dana} onChange={(e) => setDana(e.target.value)}>
                 <option value="">Semua sumber dana</option>
                 {danaOpts.map((d) => <option key={d}>{d}</option>)}
               </select>
             </label>
             <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-              <span className="uppercase tracking-wide">Penerima</span>
+              <span>Penerima</span>
               <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={penerima} onChange={(e) => setPenerima(e.target.value)}>
                 <option value="">Semua penerima</option>
                 {penerimaOpts.map((p) => <option key={p}>{p}</option>)}
               </select>
             </label>
             <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-              <span className="uppercase tracking-wide">Kegiatan</span>
+              <span>Kegiatan</span>
               <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={kegFilter} onChange={(e) => setKegFilter(e.target.value)}>
                 <option value="">Semua kegiatan</option>
                 {kegOpts.map((k) => <option key={k.kd} value={k.kd}>{k.name}</option>)}
               </select>
             </label>
             <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-              <span className="uppercase tracking-wide">Triwulan</span>
+              <span>Triwulan</span>
               <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={triwulan} onChange={(e) => setTriwulan(e.target.value)}>
                 <option value="">Semua</option>
                 <option value="1">Triwulan I</option>
@@ -419,7 +419,7 @@ export default function SppView() {
               </select>
             </label>
             <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-              <span className="uppercase tracking-wide">Cari SPP</span>
+              <span>Cari SPP</span>
               <Input className="h-9 w-full text-sm" placeholder="No SPP / uraian…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </label>
           </div>
@@ -433,7 +433,7 @@ export default function SppView() {
               return (
                 <details key={noS} className="rounded-md border">
                   <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm">
-                    <span className="text-xs text-muted-foreground">{tglID(s.Tgl_SPP)}</span>
+                    <span className="text-xs text-muted-foreground">{tgl(s.Tgl_SPP)}</span>
                     <b>{noS}</b>
                     <span className="flex-1 truncate">{vt(s.Keterangan)}</span>
                     {edited && <span className="rounded bg-amber-500/20 px-1.5 text-[10px] text-amber-700 dark:text-amber-400">Diedit</span>}
@@ -441,7 +441,7 @@ export default function SppView() {
                     {kws.length > 0 && (
                       <button type="button" className="rounded border px-1.5 text-xs" title={`Cetak ${kws.length} kwitansi SPP ini`} onClick={(e) => { e.preventDefault(); bukaCetakSemua(noS); }}><Printer className="size-3" /></button>
                     )}
-                    <button type="button" className="rounded border px-1.5 text-xs" onClick={(e) => { e.preventDefault(); setEditCtx({ table: "Ta_SPP", keys: { No_SPP: noS } }); }}>✎</button>
+                    <button type="button" className="rounded border px-1.5 text-xs" title="Ubah baris SPP" aria-label="Ubah baris SPP" onClick={(e) => { e.preventDefault(); setEditCtx({ table: "Ta_SPP", keys: { No_SPP: noS } }); }}>✎</button>
                   </summary>
                   <div className="px-3 pb-2">
                     {kws.map((b) => {
@@ -460,7 +460,7 @@ export default function SppView() {
                             <button type="button" className="rounded border px-1.5" onClick={() => setEditCtx({ table: "Ta_SPPBukti", keys: { No_SPP: noS, No_Bukti: vt(b.No_Bukti) } })}>✎</button>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
-                            <span>Tgl {tglID(nb.Tgl_Bukti)}</span>
+                            <span>Tgl {tgl(nb.Tgl_Bukti)}</span>
                             <DanaBadge value={vt(nb.Sumberdana)} />
                             {linkOf(nb.link_bukti) && <a className="text-primary underline" href={linkOf(nb.link_bukti)} target="_blank" rel="noreferrer">bukti</a>}
                           </div>

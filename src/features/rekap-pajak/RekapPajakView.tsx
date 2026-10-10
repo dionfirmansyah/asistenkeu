@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { idb, idbAll, idbDel, idbPut, newId, peekCache, rememberCache, type PajakManual } from "@/lib/storage/idb";
 import { parsePajakBuffer, savePajakFile, type PajakFileRec } from "@/lib/pajakFile";
 import { vt } from "@/lib/engine/util";
-import { rp } from "@/lib/engine/format";
+import { rp, tgl } from "@/lib/engine/format";
 import { copyText, download } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,10 +45,6 @@ const jenisLabel = (kdRincian: string, jenisSetoran: string): string => {
   return JENIS_LABEL[k] ?? k;
 };
 
-const tglID = (v: unknown) => {
-  const d = vt(v);
-  return d && d.length >= 10 ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "";
-};
 const quarter = (v: unknown) => {
   const d = vt(v);
   if (!d || d.length < 7) return 0;
@@ -182,13 +178,17 @@ export default function RekapPajakView() {
     const head = "No SSP,Tgl SSP,Keterangan,Jenis Pajak,Nilai,NTPN,No Bukti";
     const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = filtered.map((x) =>
-      [x.noSsp, tglID(x.tgl), cell(x.keterangan), cell(x.jenis), x.nilai, x.ntpn, cell(x.noBukti)].join(","),
+      [x.noSsp, tgl(x.tgl), cell(x.keterangan), cell(x.jenis), x.nilai, x.ntpn, cell(x.noBukti)].join(","),
     );
     download("rekap_pajak.csv", "﻿" + [head, ...lines].join("\r\n"), "text/csv;charset=utf-8");
   };
 
   return (
     <div className="space-y-4">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold text-primary">Rekap pajak</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">Setoran pajak (SSP) dari file pajak Siskeudes.</p>
+      </div>
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
           <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
@@ -265,24 +265,25 @@ export default function RekapPajakView() {
           </Card>
 
           <Card>
-            <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Rekap pajak ({filtered.length})</CardTitle></CardHeader>
+            <CardHeader className="p-3 pb-1"><CardTitle>Rekap pajak ({filtered.length})</CardTitle></CardHeader>
             <CardContent className="overflow-x-auto p-3">
-              <table className="w-full border-collapse text-sm">
+              <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full border-collapse text-[13px]">
                 <thead>
-                  <tr className="bg-muted text-xs">
-                    <th scope="col" className="border px-2 py-1 text-left">NO SSP</th>
-                    <th scope="col" className="border px-2 py-1 text-left">TGL</th>
-                    <th scope="col" className="border px-2 py-1 text-left">KETERANGAN</th>
-                    <th scope="col" className="border px-2 py-1 text-left">JENIS PAJAK</th>
-                    <th scope="col" className="border px-2 py-1 text-right">NILAI (Rp)</th>
-                    <th scope="col" className="border px-2 py-1 text-left">NTPN</th>
-                    <th scope="col" className="border px-2 py-1 text-left">NO BUKTI</th>
+                  <tr className="bg-muted">
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">No SSP</th>
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Tanggal</th>
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Keterangan</th>
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Jenis pajak</th>
+                    <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Nilai (Rp)</th>
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">NTPN</th>
+                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">No bukti</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((x) => (
-                    <tr key={x.key}>
-                      <td className="border px-2 py-1 text-xs">
+                    <tr key={x.key} className="hover:bg-primary/5">
+                      <td className="h-11 border px-3 text-xs font-medium">
                         {x.noSsp}
                         {x.manual && (
                           <div>
@@ -294,17 +295,18 @@ export default function RekapPajakView() {
                           </div>
                         )}
                       </td>
-                      <td className="border px-2 py-1 text-xs">{tglID(x.tgl)}</td>
-                      <td className="border px-2 py-1">{x.keterangan ? <CopyCell text={x.keterangan} /> : <span className="text-muted-foreground">—</span>}</td>
-                      <td className="border px-2 py-1">{x.jenis}</td>
-                      <td className="border px-2 py-1 num">{rp(x.nilai)}</td>
-                      <td className="border px-2 py-1 font-mono text-xs">{x.ntpn ? <CopyCell text={x.ntpn} /> : <span className="text-muted-foreground">—</span>}</td>
-                      <td className="border px-2 py-1 text-xs">{x.noBukti || <span className="text-muted-foreground">—</span>}</td>
+                      <td className="h-11 border px-3 text-xs">{tgl(x.tgl)}</td>
+                      <td className="h-11 border px-3">{x.keterangan ? <CopyCell text={x.keterangan} /> : <span className="text-muted-foreground">—</span>}</td>
+                      <td className="h-11 border px-3">{x.jenis}</td>
+                      <td className="h-11 border px-3 num">{rp(x.nilai)}</td>
+                      <td className="h-11 border px-3 font-mono text-xs">{x.ntpn ? <CopyCell text={x.ntpn} /> : <span className="text-muted-foreground">—</span>}</td>
+                      <td className="h-11 border px-3 text-xs">{x.noBukti || <span className="text-muted-foreground">—</span>}</td>
                     </tr>
                   ))}
-                  {!filtered.length && <tr><td colSpan={7} className="border px-2 py-3 text-center text-sm text-muted-foreground">Tidak ada data.</td></tr>}
+                  {!filtered.length && <tr><td colSpan={7} className="border px-3 py-3 text-center text-sm text-muted-foreground">Tidak ada data.</td></tr>}
                 </tbody>
               </table>
+              </div>
             </CardContent>
           </Card>
 
@@ -329,7 +331,7 @@ export default function RekapPajakView() {
 function Filter({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-1 text-xs font-medium text-muted-foreground">
-      <span className="uppercase tracking-wide">{label}</span>
+      <span>{label}</span>
       {children}
     </label>
   );
@@ -340,7 +342,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-lg font-semibold" title={value}>{value}</div>
+        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
         <div className="truncate text-xs text-muted-foreground" title={sub}>{sub}</div>
       </CardContent>
     </Card>

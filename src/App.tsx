@@ -3,9 +3,8 @@ import { useThemeStore } from "@/stores/theme-store";
 import { useSmdStore } from "@/stores/smd-store";
 import { villageIdentity } from "@/lib/engine/identity";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronRight, FileText, Landmark, Moon, Sun, User } from "lucide-react"
-import NavShell from "@/components/layout/NavShell";
+import { ChevronRight, FileText, Landmark, Moon, Sun, Upload, User } from "lucide-react"
+import NavShell, { SECTIONS } from "@/components/layout/NavShell";
 
 const initialsOf = (nama: string): string =>
   nama
@@ -21,11 +20,17 @@ export default function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [restoring, setRestoring] = useState(true);
   const ident = useMemo(() => villageIdentity(tables), [tables]);
+  const [crumb, setCrumb] = useState(() => window.location.hash.replace(/^#\/?/, "").split("/")[0] || "dashboard");
 
   useEffect(() => {
     init();
     void useSmdStore.getState().restore().finally(() => setRestoring(false));
+    const onHash = () => setCrumb(window.location.hash.replace(/^#\/?/, "").split("/")[0] || "dashboard");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, [init]);
+
+  const crumbLabel = SECTIONS.flatMap((s) => s.items).find((i) => i.id === crumb)?.label ?? "Dashboard";
 
   return (
     <div id="app-root" className="min-h-svh bg-background text-foreground">
@@ -100,27 +105,32 @@ export default function App() {
 
         {/* Bar breadcrumb putih */}
         <div className="border-b border-border bg-background">
-          <div className="mx-auto flex w-full max-w-[1440px] items-center gap-1.5 px-4 py-1.5 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Beranda</span>
+          <div className="mx-auto flex h-8 w-full max-w-[1440px] items-center gap-1.5 px-4 text-xs text-muted-foreground">
+            <button
+              type="button"
+              className="shrink-0 hover:text-foreground"
+              onClick={() => { window.location.hash = "/dashboard"; }}
+            >
+              Beranda
+            </button>
             <ChevronRight className="size-3 shrink-0" />
-            <span className="truncate">Asisten Keuangan Desa</span>
+            <span className="truncate font-medium text-foreground">{crumbLabel}</span>
             <span className="ml-auto flex shrink-0 items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
+              <span className="size-1.5 rounded-full bg-success" />
               100% offline di browser
             </span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1440px] p-4 space-y-4">
+      <main className="w-full">
         {restoring ? (
-          <div className="space-y-4" aria-label="Memuat data tersimpan">
+          <div className="mx-auto w-full max-w-[1440px] space-y-4 p-4" aria-label="Memuat data tersimpan">
             <div className="h-24 animate-pulse rounded-lg bg-muted" />
             <div className="h-64 animate-pulse rounded-lg bg-muted" />
           </div>
-        ) : (
-          <>
-        {!fileName && (
+        ) : !fileName ? (
+          <div className="mx-auto w-full max-w-[1440px] p-4">
           <div
             role="button"
             tabIndex={0}
@@ -135,9 +145,12 @@ export default function App() {
               if (f) void loadFile(f);
             }}
           >
-            <Upload className="mx-auto size-8 text-muted-foreground" />
-            <h2 className="mt-2 font-semibold">Pilih atau seret file .SMD ke sini</h2>
-            <p className="text-sm text-muted-foreground">File diproses &amp; disimpan lokal di browser (IndexedDB).</p>
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-info-soft text-primary">
+              <Upload className="size-5" />
+            </div>
+            <h2 className="mt-3 font-semibold">Belum ada file Siskeudes</h2>
+            <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">Unggah file .SMD untuk mulai. Data diproses di perangkat ini dan tidak dikirim ke server.</p>
+            <Button className="mt-4" onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}>Unggah file .SMD</Button>
             <input
               ref={inputRef}
               type="file"
@@ -149,12 +162,9 @@ export default function App() {
               }}
             />
           </div>
-        )}
-
-
-
-        {fileName && <NavShell />}
-          </>
+          </div>
+        ) : (
+          <NavShell />
         )}
       </main>
     </div>
