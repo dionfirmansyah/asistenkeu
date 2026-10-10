@@ -115,10 +115,7 @@ export default function App() {
             </button>
             <ChevronRight className="size-3 shrink-0" />
             <span className="truncate font-medium text-foreground">{crumbLabel}</span>
-            <span className="ml-auto flex shrink-0 items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-success" />
-              100% offline di browser
-            </span>
+            
           </div>
         </div>
       </header>

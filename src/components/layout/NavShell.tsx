@@ -160,11 +160,11 @@ export default function NavShell() {
                       <Button
                         key={it.id}
                         variant="ghost"
-                        className={`relative h-10 w-full items-center justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-primary hover:bg-accent hover:text-primary" : "text-foreground/80 hover:bg-accent"}`}
+                        className={`relative h-10 w-full items-center justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-gold hover:bg-accent hover:text-gold" : "text-foreground/80 hover:bg-accent"}`}
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => go(it.id)}
                       >
-                        {isActive && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-primary" />}
+                        {isActive && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-gold" />}
                         <it.icon className="size-5 shrink-0" />
                         <span className="truncate">{it.label}</span>
                       </Button>

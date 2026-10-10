@@ -364,10 +364,13 @@ export default function RpdView() {
             </label>
             <label className="block space-y-1 text-xs font-medium">
               <span>Rincian kegiatan</span>
-              <Select value={rinc} onValueChange={(v) => setRinc(v ?? "")} disabled={!keg}>
-                <SelectTrigger className="h-9 w-full"><SelectValue placeholder={keg ? "Pilih rincian kegiatan…" : "Pilih kegiatan dulu…"} /></SelectTrigger>
-                <SelectContent>{rincOptions.map(([id, name]) => <SelectItem key={id} value={id}>{id}. {name}</SelectItem>)}</SelectContent>
-              </Select>
+              <ComboboxField
+                items={rincOptions.map(([id, name]) => ({ value: id, label: `${id}. ${name}` }))}
+                value={rinc}
+                onChange={(v) => setRinc(v)}
+                placeholder={keg ? "Cari & pilih rincian…" : "Pilih kegiatan dulu…"}
+                disabled={!keg}
+              />
             </label>
             <div className="relative">
               <span className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground">⌕</span>

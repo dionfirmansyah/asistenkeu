@@ -217,31 +217,78 @@ export default function PajakView() {
 
       <Card>
         <CardHeader className="p-4 pb-1 md:p-5 md:pb-1"><CardTitle>Simulasi potongan pajak</CardTitle></CardHeader>
-        <CardContent className="space-y-1 p-4 font-mono text-xs md:p-5">
-          {!nilai && <p className="text-muted-foreground">Ketik nilai belanja di atas untuk melihat simulasi potongan pajak.</p>}
+        <CardContent className="p-4 md:p-5">
+          {!nilai && <p className="text-sm text-muted-foreground">Ketik nilai belanja di atas untuk melihat simulasi potongan pajak.</p>}
           {!!nilai && (
-            <>
-              <div>Uraian&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {s.uraian || "-"}</div>
-              <div>Kategori&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {kat.label}</div>
-              <div>Nilai belanja&nbsp;: {rp(nilai)}</div>
-              <div>Status NPWP&nbsp;&nbsp;: {s.kat === "konsumsi" ? "tidak berlaku" : s.kat === "galian" ? "tidak berlaku" : s.npwp === "ya" ? "Punya NPWP" : "Tidak punya NPWP"}</div>
-              <hr className="my-1" />
-              {lines.map((l, i) => <div key={i}>{l.ket} : {rp(l.amt)}</div>)}
-              {s.kat === "konsumsi" && <div>(Konsumsi tidak kena PPN/PPh — hanya pajak daerah)</div>}
-              <hr className="my-1" />
-              <div className="font-semibold">Total potongan&nbsp;&nbsp;: {rp(pot)}</div>
-              <div className="font-semibold">Dibayarkan&nbsp;&nbsp;&nbsp;&nbsp;: {rp(nilai - pot)}</div>
+            <div className="space-y-4">
+              <dl className="space-y-1.5 text-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted-foreground">Uraian</dt>
+                  <dd className="truncate text-right font-medium" title={s.uraian || "-"}>{s.uraian || "-"}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted-foreground">Kategori</dt>
+                  <dd className="text-right font-medium">{kat.label}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted-foreground">Nilai belanja</dt>
+                  <dd className="num text-right font-medium">{rp(nilai)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted-foreground">Status NPWP</dt>
+                  <dd className="text-right font-medium">{s.kat === "konsumsi" || s.kat === "galian" ? "Tidak berlaku" : s.npwp === "ya" ? "Punya NPWP" : "Tidak punya NPWP"}</dd>
+                </div>
+              </dl>
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="bg-muted text-left">
+                      <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Potongan</th>
+                      <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((l, i) => (
+                      <tr key={i} className="border-t hover:bg-primary/5">
+                        <td className="h-11 px-3">{l.ket}</td>
+                        <td className="num h-11 px-3">{rp(l.amt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {s.kat === "konsumsi" && <p className="text-xs text-muted-foreground">Konsumsi tidak kena PPN/PPh — hanya pajak daerah.</p>}
+              <dl className="space-y-1.5 rounded-lg border bg-muted/40 p-3 text-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="font-semibold">Total potongan</dt>
+                  <dd className="num font-semibold">{rp(pot)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="font-semibold text-primary">Dibayarkan</dt>
+                  <dd className="num text-base font-semibold text-primary">{rp(nilai - pot)}</dd>
+                </div>
+              </dl>
               {potBulat !== pot && (
-                <>
-                  <hr className="my-1" />
-                  <div className="text-muted-foreground">Saran pembulatan (kelipatan Rp100):</div>
-                  {lines.map((l, i) => <div key={i}>{l.label} : {rp(roundUp100(l.amt))}</div>)}
-                  <div className="font-semibold">Total dibulatkan : {rp(potBulat)}</div>
-                  <div className="font-semibold">Dibayarkan&nbsp;&nbsp;&nbsp;&nbsp;: {rp(nilai - potBulat)}</div>
-                  <div className="text-muted-foreground">Selisih pembulatan: {rp(potBulat - pot)}</div>
-                </>
+                <div className="space-y-1.5 rounded-lg border p-3 text-sm">
+                  <div className="text-xs font-medium text-muted-foreground">Saran pembulatan (kelipatan Rp100)</div>
+                  {lines.map((l, i) => (
+                    <div key={i} className="flex items-baseline justify-between gap-3">
+                      <dt className="truncate text-muted-foreground">{l.label}</dt>
+                      <dd className="num shrink-0">{rp(roundUp100(l.amt))}</dd>
+                    </div>
+                  ))}
+                  <div className="flex items-baseline justify-between gap-3 border-t pt-1.5 font-semibold">
+                    <dt>Total dibulatkan</dt>
+                    <dd className="num">{rp(potBulat)}</dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-3 font-semibold">
+                    <dt>Dibayarkan</dt>
+                    <dd className="num">{rp(nilai - potBulat)}</dd>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Selisih pembulatan: {rp(potBulat - pot)}</div>
+                </div>
               )}
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
