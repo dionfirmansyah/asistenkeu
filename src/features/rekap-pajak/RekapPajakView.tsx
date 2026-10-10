@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSmdStore } from "@/stores/smd-store";
-import { idb, idbAll, idbDel, idbPut, newId, type PajakManual } from "@/lib/storage/idb";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { idb, idbAll, idbDel, idbPut, newId, peekCache, rememberCache, type PajakManual } from "@/lib/storage/idb";
+import { parsePajakBuffer, savePajakFile, type PajakFileRec } from "@/lib/pajakFile";
 import { vt } from "@/lib/engine/util";
 import { rp } from "@/lib/engine/format";
-import { download } from "@/lib/csv";
+import { copyText, download } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,21 +12,38 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { ComboboxField } from "@/components/ui/combobox";
 import type { Row } from "@/types/smd";
 
+const SAMPLE_PATH = "dataset/PAJAK_DESA_20261010.smd";
+const SAMPLE_NAME = "PAJAK_DESA_20261010.smd";
+
+type PajakFile = PajakFileRec;
+
 interface BarisPajak {
   key: string;
-  noSpp: string;
-  noBukti: string;
-  kdKeg: string;
-  namaKeg: string;
-  kdRincian: string;
+  noSsp: string;
+  tgl: string;
+  keterangan: string;
+  jenis: string;
   nilai: number;
-  billing: string;
-  penerima: string;
-  tglBukti: string;
-  sumberDana: string;
+  ntpn: string;
+  noBukti: string;
   manual: boolean;
   manualId?: string;
 }
+
+/** Label jenis pajak: utamakan Jenis_Setoran dari file, fallback peta kode → nama. */
+const JENIS_LABEL: Record<string, string> = {
+  "7.1.1.01.": "PPN Dalam Negeri - Masa",
+  "7.1.1.02.": "PPh Pasal 21 - Masa",
+  "7.1.1.03.": "PPh Pasal 22 - Masa",
+  "7.1.2.01.": "Pajak Daerah",
+  "7.1.2.02.": "Pajak Galian C",
+};
+const jenisLabel = (kdRincian: string, jenisSetoran: string): string => {
+  const s = jenisSetoran.trim();
+  if (s) return s;
+  const k = kdRincian.trim();
+  return JENIS_LABEL[k] ?? k;
+};
 
 const tglID = (v: unknown) => {
   const d = vt(v);
@@ -40,216 +57,276 @@ const quarter = (v: unknown) => {
 };
 
 export default function RekapPajakView() {
-  const { flat } = useSmdStore();
-  const [spp, setSpp] = useState<{ name: string; bukti: Row[]; pot: Row[]; reg: Row[] } | null>(null);
-  const [manual, setManual] = useState<PajakManual[]>([]);
+  const [file, setFile] = useState<PajakFile | null>(() => peekCache<PajakFile>("src:pajak") ?? null);
+  const [manual, setManual] = useState<PajakManual[]>(() => {
+    const f = peekCache<PajakFile>("src:pajak");
+    return f ? (peekCache<PajakManual[]>(`manual:${f.name}`) ?? []) : [];
+  });
   const [jenis, setJenis] = useState("");
-  const [noSpp, setNoSpp] = useState("");
+  const [noSsp, setNoSsp] = useState("");
   const [triwulan, setTriwulan] = useState("");
   const [sumber, setSumber] = useState("");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [loadingSample, setLoadingSample] = useState(false);
 
   const reload = async () => {
     const db = await idb();
-    const rec = (await db.get("sourceFiles", "spp")) as typeof spp | undefined;
+    const rec = (await db.get("sourceFiles", "pajak")) as (PajakFile & { savedAt?: number }) | undefined;
+    rememberCache("src:pajak", rec ? { name: rec.name, pajak: rec.pajak, rinci: rec.rinci } : null);
     if (rec) {
-      setSpp(rec);
-      setManual(await idbAll<PajakManual>("pajakManual", rec.name));
+      setFile({ name: rec.name, pajak: rec.pajak, rinci: rec.rinci });
+      const ms = await idbAll<PajakManual>("pajakManual", rec.name);
+      rememberCache(`manual:${rec.name}`, ms);
+      setManual(ms);
     }
   };
   useEffect(() => { void reload(); }, []);
 
-  const namaKeg = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of flat) if (!r.Pseudo && !m.has(r.Kd_Keg)) m.set(r.Kd_Keg, r.Nama_Kegiatan || r.Kd_Keg);
-    return m;
-  }, [flat]);
+  const saveFile = async (pf: PajakFile) => {
+    setFile(pf);
+    await savePajakFile(pf);
+    const ms = await idbAll<PajakManual>("pajakManual", pf.name);
+    rememberCache(`manual:${pf.name}`, ms);
+    setManual(ms);
+    setMsg(`${pf.name}: ${pf.pajak.length.toLocaleString("id-ID")} SSP pajak.`);
+  };
 
-  const buktiMap = useMemo(() => {
-    const m = new Map<string, Row>();
-    for (const b of spp?.bukti ?? []) m.set(`${vt(b.No_SPP)}¦${vt(b.No_Bukti)}`, b);
+  const processFile = async (f: File) => {
+    setMsg("Membaca file pajak…");
+    try {
+      const pf = parsePajakBuffer(new Uint8Array(await f.arrayBuffer()), f.name);
+      await saveFile(pf);
+    } catch (e) {
+      setMsg("Gagal membaca file pajak: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  const loadSample = async () => {
+    setLoadingSample(true);
+    setMsg("Memuat file contoh…");
+    try {
+      const res = await fetch(SAMPLE_PATH);
+      if (!res.ok) throw new Error("File contoh tidak ditemukan.");
+      const pf = parsePajakBuffer(new Uint8Array(await res.arrayBuffer()), SAMPLE_NAME);
+      await saveFile(pf);
+    } catch (e) {
+      setMsg("Gagal memuat contoh: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
+  const rinciBySsp = useMemo(() => {
+    const m = new Map<string, Row[]>();
+    for (const r of file?.rinci ?? []) {
+      const k = vt(r.No_SSP);
+      const arr = m.get(k);
+      if (arr) arr.push(r);
+      else m.set(k, [r]);
+    }
     return m;
-  }, [spp]);
+  }, [file]);
+
+  const sspMap = useMemo(() => {
+    const m = new Map<string, Row>();
+    for (const p of file?.pajak ?? []) m.set(vt(p.No_SSP), p);
+    return m;
+  }, [file]);
 
   const rows: BarisPajak[] = useMemo(() => {
     const out: BarisPajak[] = [];
-    for (const p of spp?.pot ?? []) {
-      const b = buktiMap.get(`${vt(p.No_SPP)}¦${vt(p.No_Bukti)}`);
-      const kdKeg = vt(p.Kd_Keg) || (b ? vt(b.Kd_Keg) : "");
+    for (const p of file?.pajak ?? []) {
+      const noSsp = vt(p.No_SSP);
+      const bukti = (rinciBySsp.get(noSsp) ?? []).map((r) => vt(r.No_Bukti)).filter(Boolean).join(", ");
       out.push({
-        key: `file:${vt(p.No_SPP)}¦${vt(p.No_Bukti)}¦${vt(p.Kd_Rincian)}¦${Number(p.Nilai) || 0}`,
-        noSpp: vt(p.No_SPP), noBukti: vt(p.No_Bukti), kdKeg,
-        namaKeg: namaKeg.get(kdKeg) || kdKeg,
-        kdRincian: vt(p.Kd_Rincian), nilai: Number(p.Nilai) || 0,
-        billing: vt(p.Billing_Pajak),
-        penerima: b ? vt(b.Nm_Penerima) : "", tglBukti: b ? vt(b.Tgl_Bukti) : "",
-        sumberDana: b ? vt(b.Sumberdana) : "", manual: false,
+        key: `file:${noSsp}¦${vt(p.Kd_Rincian)}¦${Number(p.Jumlah) || 0}`,
+        noSsp, tgl: vt(p.Tgl_SSP), keterangan: vt(p.Keterangan),
+        jenis: jenisLabel(vt(p.Kd_Rincian), vt(p.Jenis_Setoran)),
+        nilai: Number(p.Jumlah) || 0, ntpn: vt(p.NTPN),
+        noBukti: bukti, manual: false,
       });
     }
     for (const m of manual) {
-      const b = buktiMap.get(`${m.noSpp}¦${m.noBukti}`);
+      const ssp = sspMap.get(m.noSpp);
       out.push({
-        key: `manual:${m.id}`, noSpp: m.noSpp, noBukti: m.noBukti, kdKeg: m.kdKeg,
-        namaKeg: namaKeg.get(m.kdKeg) || m.kdKeg, kdRincian: m.kdRincian, nilai: m.nilai,
-        billing: m.billing, penerima: b ? vt(b.Nm_Penerima) : "", tglBukti: b ? vt(b.Tgl_Bukti) : "",
-        sumberDana: b ? vt(b.Sumberdana) : "", manual: true, manualId: m.id,
+        key: `manual:${m.id}`, noSsp: m.noSpp, tgl: ssp ? vt(ssp.Tgl_SSP) : "",
+        keterangan: ssp ? vt(ssp.Keterangan) : "", jenis: jenisLabel(m.kdRincian, ""),
+        nilai: m.nilai, ntpn: m.billing, noBukti: m.noBukti,
+        manual: true, manualId: m.id,
       });
     }
-    return out.sort((a, b) => a.noSpp.localeCompare(b.noSpp, "id", { numeric: true }) || a.noBukti.localeCompare(b.noBukti));
-  }, [spp, manual, buktiMap, namaKeg]);
+    return out.sort((a, b) => a.noSsp.localeCompare(b.noSsp, "id", { numeric: true }));
+  }, [file, manual, rinciBySsp, sspMap]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((x) => {
-      if (jenis && x.kdRincian !== jenis) return false;
-      if (noSpp && x.noSpp !== noSpp) return false;
-      if (triwulan && quarter(x.tglBukti) !== Number(triwulan)) return false;
+      if (jenis && x.jenis !== jenis) return false;
+      if (noSsp && x.noSsp !== noSsp) return false;
+      if (triwulan && quarter(x.tgl) !== Number(triwulan)) return false;
       if (sumber === "file" && x.manual) return false;
       if (sumber === "manual" && !x.manual) return false;
-      if (q && !`${x.noSpp} ${x.noBukti} ${x.kdRincian} ${x.penerima} ${x.namaKeg} ${x.billing}`.toLowerCase().includes(q)) return false;
+      if (q && !`${x.noSsp} ${x.keterangan} ${x.jenis} ${x.ntpn} ${x.noBukti}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, jenis, noSpp, triwulan, sumber, search]);
+  }, [rows, jenis, noSsp, triwulan, sumber, search]);
 
   const totNilai = filtered.reduce((s, x) => s + x.nilai, 0);
-  const jenisOpts = [...new Set(rows.map((x) => x.kdRincian).filter(Boolean))].sort();
-  const sppOpts = [...new Set(rows.map((x) => x.noSpp))].sort();
-  const billingOk = filtered.filter((x) => x.billing.trim()).length;
+  const jenisOpts = [...new Set(rows.map((x) => x.jenis).filter(Boolean))].sort();
+  const sspOpts = [...new Set(rows.filter((x) => !x.manual).map((x) => x.noSsp))].sort();
+  const ntpnOk = filtered.filter((x) => x.ntpn.trim()).length;
 
   const exportCsv = () => {
-    const head = "No SPP,No Bukti,Kegiatan,Jenis Pajak,Nilai,Billing,Penerima,Tgl Bukti,Sumber";
+    const head = "No SSP,Tgl SSP,Keterangan,Jenis Pajak,Nilai,NTPN,No Bukti";
+    const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const lines = filtered.map((x) =>
-      [x.noSpp, x.noBukti, `"${x.namaKeg.replace(/"/g, '""')}"`, x.kdRincian, x.nilai, x.billing, `"${x.penerima.replace(/"/g, '""')}"`, tglID(x.tglBukti), x.sumberDana].join(","),
+      [x.noSsp, tglID(x.tgl), cell(x.keterangan), cell(x.jenis), x.nilai, x.ntpn, cell(x.noBukti)].join(","),
     );
     download("rekap_pajak.csv", "﻿" + [head, ...lines].join("\r\n"), "text/csv;charset=utf-8");
   };
 
-  if (!spp) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Belum ada file SPP. Muat dulu di menu <b>Register SPP</b>, atau pakai file contoh di <b>Data Register SPP</b>.
-      </p>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Kpi label="Total pajak" value={rp(totNilai)} sub={`${filtered.length} baris`} />
-        <Kpi label="Jenis pajak" value={String(jenisOpts.length)} sub={jenisOpts.join(", ") || "-"} />
-        <Kpi label="Billing terisi" value={`${billingOk}/${filtered.length}`} sub="Billing_Pajak (e-Billing)" />
-        <Kpi label="Input manual" value={String(manual.length)} sub="Menunggu ekspor .smd" />
-      </div>
-
       <Card>
-        <CardContent className="space-y-2 p-3">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <Filter label="Jenis pajak">
-              <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={jenis} onChange={(e) => setJenis(e.target.value)}>
-                <option value="">Semua jenis</option>
-                {jenisOpts.map((j) => <option key={j} value={j}>{j}</option>)}
-              </select>
-            </Filter>
-            <Filter label="SPP">
-              <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={noSpp} onChange={(e) => setNoSpp(e.target.value)}>
-                <option value="">Semua SPP</option>
-                {sppOpts.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </Filter>
-            <Filter label="Triwulan">
-              <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={triwulan} onChange={(e) => setTriwulan(e.target.value)}>
-                <option value="">Semua triwulan</option>
-                <option value="1">Triwulan I</option>
-                <option value="2">Triwulan II</option>
-                <option value="3">Triwulan III</option>
-                <option value="4">Triwulan IV</option>
-              </select>
-            </Filter>
-            <Filter label="Sumber">
-              <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={sumber} onChange={(e) => setSumber(e.target.value)}>
-                <option value="">Semua</option>
-                <option value="file">Dari file</option>
-                <option value="manual">Input manual</option>
-              </select>
-            </Filter>
-            <Filter label="Cari">
-              <Input className="h-9 w-full text-sm" placeholder="SPP / penerima / billing…" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </Filter>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={() => setFormOpen(true)}>+ Tambah data pajak</Button>
-            <Button size="sm" variant="outline" onClick={exportCsv}>Ekspor CSV</Button>
-            <span className="text-xs text-muted-foreground">{filtered.length} baris · {rp(totNilai)}</span>
-          </div>
+        <CardContent className="flex flex-wrap items-center gap-2 p-3">
+          <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
+            {file ? "Ganti file pajak .SMD" : "Pilih file pajak .SMD"}
+            <input type="file" accept=".smd,.SMD" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void processFile(f); e.target.value = ""; }} />
+          </label>
+          {!file && (
+            <Button size="sm" variant="outline" disabled={loadingSample} onClick={loadSample}>
+              {loadingSample ? "Memuat…" : `Muat ${SAMPLE_NAME}`}
+            </Button>
+          )}
+          {file && <span className="text-xs text-muted-foreground">{file.name} · {file.pajak.length.toLocaleString("id-ID")} SSP · {file.rinci.length.toLocaleString("id-ID")} rincian</span>}
+          {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Rekap pajak ({filtered.length})</CardTitle></CardHeader>
-        <CardContent className="p-3 overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-muted text-xs">
-                <th className="border px-2 py-1 text-left">NO SPP</th>
-                <th className="border px-2 py-1 text-left">NO BUKTI</th>
-                <th className="border px-2 py-1 text-left">KEGIATAN</th>
-                <th className="border px-2 py-1 text-left">JENIS PAJAK</th>
-                <th className="border px-2 py-1 text-right">NILAI (Rp)</th>
-                <th className="border px-2 py-1 text-left">BILLING</th>
-                <th className="border px-2 py-1 text-left">PENERIMA</th>
-                <th className="border px-2 py-1 text-left">TGL BUKTI</th>
-                <th className="border px-2 py-1 text-center">AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((x) => (
-                <tr key={x.key}>
-                  <td className="border px-2 py-1 text-xs">{x.noSpp}</td>
-                  <td className="border px-2 py-1 text-xs">{x.noBukti}</td>
-                  <td className="border px-2 py-1">{x.namaKeg}</td>
-                  <td className="border px-2 py-1">{x.kdRincian}</td>
-                  <td className="border px-2 py-1 num">{rp(x.nilai)}</td>
-                  <td className="border px-2 py-1 text-xs">{x.billing || <span className="text-muted-foreground">—</span>}</td>
-                  <td className="border px-2 py-1">{x.penerima}</td>
-                  <td className="border px-2 py-1 text-xs">{tglID(x.tglBukti)}</td>
-                  <td className="border px-2 py-1 text-center">
-                    {x.manual ? (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={async () => {
-                        if (!x.manualId || !window.confirm("Hapus data pajak manual ini?")) return;
-                        await idbDel("pajakManual", x.manualId);
-                        await reload();
-                      }}>Hapus</Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">File</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={9} className="border px-2 py-3 text-center text-sm text-muted-foreground">Tidak ada data.</td></tr>}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {!file && (
+        <p className="text-sm text-muted-foreground">
+          Belum ada file pajak. Pilih file pajak .SMD dari Siskeudes (tabel Ta_Pajak + Ta_PajakRinci), atau pakai file contoh.
+          Data mentah bisa ditelaah di menu <b>Data Pajak</b>.
+        </p>
+      )}
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Tambah data pajak</DialogTitle></DialogHeader>
-          <PajakForm
-            sppOpts={sppOpts}
-            buktiList={spp.bukti}
-            jenisOpts={jenisOpts}
-            namaKeg={namaKeg}
-            fileName={spp.name}
-            onSaved={async () => { setFormOpen(false); await reload(); }}
-          />
-        </DialogContent>
-      </Dialog>
+      {file && (
+        <>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <Kpi label="Total setor pajak" value={rp(totNilai)} sub={`${filtered.length} SSP`} />
+            <Kpi label="Jenis pajak" value={String(jenisOpts.length)} sub={jenisOpts.join(", ") || "-"} />
+            <Kpi label="NTPN terisi" value={`${ntpnOk}/${filtered.length}`} sub="NTPN (bukti setor)" />
+            <Kpi label="Input manual" value={String(manual.length)} sub="Tambahan di luar file" />
+          </div>
+
+          <Card>
+            <CardContent className="space-y-2 p-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                <Filter label="Jenis pajak">
+                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={jenis} onChange={(e) => setJenis(e.target.value)}>
+                    <option value="">Semua jenis</option>
+                    {jenisOpts.map((j) => <option key={j} value={j}>{j}</option>)}
+                  </select>
+                </Filter>
+                <Filter label="SSP">
+                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={noSsp} onChange={(e) => setNoSsp(e.target.value)}>
+                    <option value="">Semua SSP</option>
+                    {sspOpts.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </Filter>
+                <Filter label="Triwulan">
+                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={triwulan} onChange={(e) => setTriwulan(e.target.value)}>
+                    <option value="">Semua triwulan</option>
+                    <option value="1">Triwulan I</option>
+                    <option value="2">Triwulan II</option>
+                    <option value="3">Triwulan III</option>
+                    <option value="4">Triwulan IV</option>
+                  </select>
+                </Filter>
+                <Filter label="Sumber">
+                  <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={sumber} onChange={(e) => setSumber(e.target.value)}>
+                    <option value="">Semua</option>
+                    <option value="file">Dari file</option>
+                    <option value="manual">Input manual</option>
+                  </select>
+                </Filter>
+                <Filter label="Cari">
+                  <Input className="h-9 w-full text-sm" placeholder="SSP / keterangan / NTPN…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </Filter>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => setFormOpen(true)}>+ Tambah data pajak</Button>
+                <Button size="sm" variant="outline" onClick={exportCsv}>Ekspor CSV</Button>
+                <span className="text-xs text-muted-foreground">{filtered.length} baris · {rp(totNilai)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Rekap pajak ({filtered.length})</CardTitle></CardHeader>
+            <CardContent className="overflow-x-auto p-3">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-muted text-xs">
+                    <th scope="col" className="border px-2 py-1 text-left">NO SSP</th>
+                    <th scope="col" className="border px-2 py-1 text-left">TGL</th>
+                    <th scope="col" className="border px-2 py-1 text-left">KETERANGAN</th>
+                    <th scope="col" className="border px-2 py-1 text-left">JENIS PAJAK</th>
+                    <th scope="col" className="border px-2 py-1 text-right">NILAI (Rp)</th>
+                    <th scope="col" className="border px-2 py-1 text-left">NTPN</th>
+                    <th scope="col" className="border px-2 py-1 text-left">NO BUKTI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((x) => (
+                    <tr key={x.key}>
+                      <td className="border px-2 py-1 text-xs">
+                        {x.noSsp}
+                        {x.manual && (
+                          <div>
+                            <Button size="sm" variant="ghost" className="h-6 px-1 text-xs text-destructive" onClick={async () => {
+                              if (!x.manualId || !window.confirm("Hapus data pajak manual ini?")) return;
+                              await idbDel("pajakManual", x.manualId);
+                              await reload();
+                            }}>Hapus</Button>
+                          </div>
+                        )}
+                      </td>
+                      <td className="border px-2 py-1 text-xs">{tglID(x.tgl)}</td>
+                      <td className="border px-2 py-1">{x.keterangan ? <CopyCell text={x.keterangan} /> : <span className="text-muted-foreground">—</span>}</td>
+                      <td className="border px-2 py-1">{x.jenis}</td>
+                      <td className="border px-2 py-1 num">{rp(x.nilai)}</td>
+                      <td className="border px-2 py-1 font-mono text-xs">{x.ntpn ? <CopyCell text={x.ntpn} /> : <span className="text-muted-foreground">—</span>}</td>
+                      <td className="border px-2 py-1 text-xs">{x.noBukti || <span className="text-muted-foreground">—</span>}</td>
+                    </tr>
+                  ))}
+                  {!filtered.length && <tr><td colSpan={7} className="border px-2 py-3 text-center text-sm text-muted-foreground">Tidak ada data.</td></tr>}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <Dialog open={formOpen} onOpenChange={setFormOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Tambah data pajak</DialogTitle></DialogHeader>
+              <PajakForm
+                sspOpts={sspOpts}
+                rinciList={file.rinci}
+                jenisOpts={jenisOpts}
+                fileName={file.name}
+                onSaved={async () => { setFormOpen(false); await reload(); }}
+              />
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
 
-function Filter({ label, children }: { label: string; children: React.ReactNode }) {
+function Filter({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-1 text-xs font-medium text-muted-foreground">
       <span className="uppercase tracking-wide">{label}</span>
@@ -270,70 +347,95 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
   );
 }
 
+/** Teks sel yang langsung tersalin ke clipboard saat diklik (dengan umpan balik). */
+function CopyCell({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
+  useEffect(() => () => { if (timer.current !== null) window.clearTimeout(timer.current); }, []);
+
+  const salin = async () => {
+    if (!text || copied) return;
+    if (!(await copyText(text))) return;
+    setCopied(true);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      title={copied ? "Tersalin!" : "Klik untuk menyalin"}
+      aria-label={copied ? "Tersalin" : `Salin: ${text}`}
+      onClick={salin}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void salin(); } }}
+      className={`cursor-pointer rounded px-0.5 underline decoration-dotted underline-offset-2 hover:bg-accent ${copied ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : ""}`}
+    >
+      {copied ? "Tersalin!" : text}
+    </span>
+  );
+}
+
 function PajakForm({
-  sppOpts, buktiList, jenisOpts, namaKeg, fileName, onSaved,
+  sspOpts, rinciList, jenisOpts, fileName, onSaved,
 }: {
-  sppOpts: string[];
-  buktiList: Row[];
+  sspOpts: string[];
+  rinciList: Row[];
   jenisOpts: string[];
-  namaKeg: Map<string, string>;
   fileName: string;
   onSaved: () => Promise<void>;
 }) {
-  const [noSpp, setNoSpp] = useState("");
+  const [noSsp, setNoSsp] = useState("");
   const [noBukti, setNoBukti] = useState("");
   const [kdRincian, setKdRincian] = useState(jenisOpts[0] ?? "");
   const [kdCustom, setKdCustom] = useState(false);
   const [nilai, setNilai] = useState(0);
-  const [billing, setBilling] = useState("");
+  const [ntpn, setNtpn] = useState("");
   const [err, setErr] = useState("");
 
-  const kws = buktiList.filter((b) => !noSpp || vt(b.No_SPP) === noSpp);
-  const kdKeg = kws.find((b) => vt(b.No_Bukti) === noBukti) ? vt(kws.find((b) => vt(b.No_Bukti) === noBukti)!.Kd_Keg) : "";
+  const buktiOpts = rinciList.filter((r) => !noSsp || vt(r.No_SSP) === noSsp);
 
   const simpan = async () => {
-    if (!noSpp || !noBukti) { setErr("Pilih SPP dan kwitansi."); return; }
+    if (!noSsp) { setErr("Pilih SSP."); return; }
     const kode = kdRincian.trim();
-    if (!kode) { setErr("Isi kode jenis pajak."); return; }
-    if (kode.length > 36) { setErr("Kode maksimal 36 karakter."); return; }
-    if (billing.length > 50) { setErr("Billing maksimal 50 karakter."); return; }
+    if (!kode) { setErr("Isi jenis pajak."); return; }
+    if (kode.length > 50) { setErr("Jenis pajak maksimal 50 karakter."); return; }
+    if (ntpn.length > 50) { setErr("NTPN maksimal 50 karakter."); return; }
     if (!(nilai > 0)) { setErr("Nilai harus lebih dari 0."); return; }
-    if (!kdKeg) { setErr("Kwitansi tidak memiliki Kd_Keg."); return; }
     await idbPut("pajakManual", {
-      id: newId("pj"), scope: fileName, fileName, noSpp, noBukti, kdKeg, kdRincian: kode,
-      nilai: Math.round(nilai * 100) / 100, billing: billing.trim(), ts: Date.now(),
+      id: newId("pj"), scope: fileName, fileName, noSpp: noSsp, noBukti: noBukti.trim(), kdKeg: "", kdRincian: kode,
+      nilai: Math.round(nilai * 100) / 100, billing: ntpn.trim(), ts: Date.now(),
     });
     await onSaved();
   };
 
   return (
     <div className="space-y-3">
-      <label className="block space-y-1 text-xs font-medium">SPP
+      <label className="block space-y-1 text-xs font-medium">SSP
         <ComboboxField
-          items={sppOpts.map((s) => ({ value: s, label: s }))}
-          value={noSpp}
-          onChange={(v) => { setNoSpp(v); setNoBukti(""); }}
-          placeholder="Cari & pilih SPP…"
+          items={sspOpts.map((s) => ({ value: s, label: s }))}
+          value={noSsp}
+          onChange={(v) => { setNoSsp(v); setNoBukti(""); }}
+          placeholder="Cari & pilih SSP…"
         />
       </label>
-      <label className="block space-y-1 text-xs font-medium">Kwitansi
+      <label className="block space-y-1 text-xs font-medium">No bukti / kwitansi (opsional)
         <ComboboxField
-          items={kws.map((b) => ({ value: vt(b.No_Bukti), label: `${vt(b.No_Bukti)} — ${vt(b.Nm_Penerima)} (${rp(Number(b.Nilai) || 0)})` }))}
+          items={buktiOpts.map((r) => ({ value: vt(r.No_Bukti), label: vt(r.No_Bukti) }))}
           value={noBukti}
           onChange={setNoBukti}
-          placeholder={noSpp ? "Pilih kwitansi…" : "Pilih SPP dulu…"}
-          disabled={!noSpp}
+          placeholder={noSsp ? "Pilih bukti…" : "Pilih SSP dulu…"}
+          disabled={!noSsp}
         />
       </label>
-      {kdKeg && <p className="text-xs text-muted-foreground">Kegiatan: <b>{namaKeg.get(kdKeg) || kdKeg}</b></p>}
       <div className="grid grid-cols-2 gap-2">
         <label className="block space-y-1 text-xs font-medium">Jenis pajak
           {kdCustom ? (
-            <Input className="h-9 text-sm" placeholder="cth: 7.1.1.01." value={kdRincian} onChange={(e) => setKdRincian(e.target.value)} />
+            <Input className="h-9 text-sm" placeholder="cth: Pajak Daerah" value={kdRincian} onChange={(e) => setKdRincian(e.target.value)} />
           ) : (
             <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={kdRincian} onChange={(e) => (e.target.value === "__baru__" ? (setKdCustom(true), setKdRincian("")) : setKdRincian(e.target.value))}>
               {jenisOpts.map((j) => <option key={j} value={j}>{j}</option>)}
-              <option value="__baru__">Kode lain…</option>
+              <option value="__baru__">Jenis lain…</option>
             </select>
           )}
         </label>
@@ -341,8 +443,8 @@ function PajakForm({
           <MoneyInput value={nilai} onChange={setNilai} />
         </label>
       </div>
-      <label className="block space-y-1 text-xs font-medium">Billing e-Billing (opsional)
-        <Input className="h-9 text-sm" value={billing} onChange={(e) => setBilling(e.target.value)} placeholder="cth: 042036264568365" />
+      <label className="block space-y-1 text-xs font-medium">NTPN (opsional)
+        <Input className="h-9 text-sm" value={ntpn} onChange={(e) => setNtpn(e.target.value)} placeholder="cth: 44BE53IS5MGU79JK" />
       </label>
       {err && <p className="text-xs text-destructive">{err}</p>}
       <Button size="sm" onClick={simpan}>Simpan</Button>

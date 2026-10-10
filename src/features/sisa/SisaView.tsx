@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSmdStore } from "@/stores/smd-store";
-import { idbAll, type RpdEntry } from "@/lib/storage/idb";
+import { idbAll, peekCache, rememberCache, type RpdEntry } from "@/lib/storage/idb";
 import { nfInt0, rp } from "@/lib/engine/format";
 import { toCSV, download } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
+import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,17 +31,23 @@ interface SisaRow {
 
 export default function SisaView() {
   const { flat } = useSmdStore();
-  const [entries, setEntries] = useState<RpdEntry[]>([]);
+  const [entries, setEntries] = useState<RpdEntry[]>(() => {
+    const head = flat[0];
+    const key = head ? `${head.Kd_Desa}-${head.Tahun}` : "default";
+    return peekCache<RpdEntry[]>(`entries:${key}`) ?? [];
+  });
   const [asal, setAsal] = useState("");
   const [jenis, setJenis] = useState("");
   const [dana, setDana] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const kdDesa = flat[0]?.Kd_Desa;
-    const scope = flat[0] ? `${flat[0].Kd_Desa}-${flat[0].Tahun}` : "default";
-    void idbAll<RpdEntry>("entries", scope).then(setEntries);
-    void kdDesa;
+    const head = flat[0];
+    const scope = head ? `${head.Kd_Desa}-${head.Tahun}` : "default";
+    void idbAll<RpdEntry>("entries", scope).then((rows) => {
+      rememberCache(`entries:${scope}`, rows);
+      setEntries(rows);
+    });
   }, [flat]);
 
   const rows = useMemo<SisaRow[]>(() => {
@@ -164,7 +171,7 @@ export default function SisaView() {
                   <td className="border px-2 py-1 text-xs">{x.kegKd}</td>
                   <td className="border px-2 py-1">{x.r.Nama_Rincian}</td>
                   <td className="border px-2 py-1">{x.r.Uraian}</td>
-                  <td className="border px-2 py-1 text-xs">{x.r.SumberDana}</td>
+                  <td className="border px-2 py-1 text-xs"><DanaBadge value={x.r.SumberDana} /></td>
                   <td className="border px-2 py-1 text-xs">{x.asal === "SILPA" ? "Dana SiLPA" : "RAB awal"}</td>
                   <td className="border px-2 py-1 text-center">{nfInt0(x.sisaVol)} {x.r.Satuan}</td>
                   <td className="border px-2 py-1 num">{rp(x.r.AnggaranStlhPAK)}</td>

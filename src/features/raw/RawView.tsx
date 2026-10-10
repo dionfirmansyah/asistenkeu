@@ -36,7 +36,7 @@ export default function RawView() {
       <div className="flex flex-wrap gap-1 border-b pb-2">
         {names.map((n) => (
           <Button key={n} size="sm" variant={n === current ? "default" : "outline"} className="h-7 text-xs" onClick={() => { setActive(n); setPage(0); setSearch(""); }}>
-            {n} ({tables![n].length})
+            {n} ({tables?.[n]?.length ?? 0})
           </Button>
         ))}
       </div>
@@ -51,7 +51,7 @@ export default function RawView() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-muted-foreground">
-              {cols.map((c) => <th key={c} className="px-2 py-1">{c}</th>)}
+              {cols.map((c) => <th key={c} scope="col" className="px-2 py-1">{c}</th>)}
             </tr>
           </thead>
           <tbody>

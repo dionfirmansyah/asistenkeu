@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Buffer } from "buffer";
-import MdbReader from "mdb-reader";
 import { useSmdStore } from "@/stores/smd-store";
-import { idb, idbPut } from "@/lib/storage/idb";
-import { decodeSmd, hasJetMagic } from "@/lib/engine/decode";
+import { idb, peekCache, rememberCache } from "@/lib/storage/idb";
+import { parseSppBuffer, saveSppFile, type SppRec } from "@/lib/sppFile";
 import { vt } from "@/lib/engine/util";
 import { rp } from "@/lib/engine/format";
 import { Input } from "@/components/ui/input";
@@ -27,7 +25,7 @@ const TABLES: TableDef[] = [
 
 export default function SppDataView() {
   const { flat } = useSmdStore();
-  const [spp, setSpp] = useState<{ name: string; reg: Row[]; rinci?: Row[]; bukti: Row[]; pot: Row[] } | null>(null);
+  const [spp, setSpp] = useState<SppRec | null>(() => peekCache<SppRec>("src:spp") ?? null);
   const [tab, setTab] = useState("reg");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState("");
@@ -37,13 +35,8 @@ export default function SppDataView() {
     try {
       const res = await fetch("dataset/SPP_DESA_20261006.smd");
       if (!res.ok) throw new Error("File contoh tidak ditemukan.");
-      const dec = decodeSmd(new Uint8Array(await res.arrayBuffer()));
-      if (!hasJetMagic(dec)) throw new Error("File contoh tidak valid.");
-      const rd = new MdbReader(Buffer.from(dec));
-      const get = (n: string) => { try { return rd.getTable(n).getData() as Row[]; } catch { return []; } };
-      const reg = get("Ta_SPP");
-      const rec = { name: "SPP_DESA_20261006.smd", reg, rinci: get("Ta_SPPRinci"), bukti: get("Ta_SPPBukti"), pot: get("Ta_SPPPot"), nSpp: reg.length };
-      await idbPut("sourceFiles", { type: "spp", ...rec, savedAt: Date.now() });
+      const rec = parseSppBuffer(new Uint8Array(await res.arrayBuffer()), "SPP_DESA_20261006.smd");
+      await saveSppFile(rec);
       setSpp(rec);
       setLoading("");
     } catch (e) {
@@ -54,6 +47,7 @@ export default function SppDataView() {
   useEffect(() => {
     void idb().then(async (db) => {
       const rec = (await db.get("sourceFiles", "spp")) as typeof spp | undefined;
+      rememberCache("src:spp", rec ?? null);
       if (rec) setSpp(rec);
     });
   }, []);
@@ -78,12 +72,18 @@ export default function SppDataView() {
     );
   }
 
+  const tableRows = (key: string): Row[] => {
+    const v = (spp as unknown as Record<string, unknown>)[key];
+    return Array.isArray(v) ? (v as Row[]) : [];
+  };
+
   const def = TABLES.find((t) => t.key === tab) ?? TABLES[0];
-  const rows: Row[] = (spp as unknown as Record<string, Row[]>)[def.key] ?? [];
+  const rows: Row[] = tableRows(def.key);
   const q = search.trim().toLowerCase();
   const filtered = q ? rows.filter((r) => Object.values(r).some((v) => vt(v).toLowerCase().includes(q))) : rows;
   const cols = [...new Set(rows.flatMap((r) => Object.keys(r)))];
-  const total = def.nominalCol ? rows.reduce((s, r) => s + (Number(r[def.nominalCol!]) || 0), 0) : 0;
+  const nominalCol = def.nominalCol;
+  const total = nominalCol ? rows.reduce((s, r) => s + (Number(r[nominalCol]) || 0), 0) : 0;
 
   // Insight pemanfaatan
   const penerimaUnik = new Set((spp.bukti ?? []).map((b) => vt(b.Nm_Penerima).trim()).filter(Boolean)).size;
@@ -110,7 +110,7 @@ export default function SppDataView() {
       {/* Tab tabel */}
       <div className="flex flex-wrap gap-1">
         {TABLES.map((t) => {
-          const n = ((spp as unknown as Record<string, Row[]>)[t.key] ?? []).length;
+          const n = tableRows(t.key).length;
           return (
             <Button key={t.key} size="sm" variant={tab === t.key ? "default" : "outline"} className="h-7 text-xs" onClick={() => { setTab(t.key); setSearch(""); }}>
               {t.name} ({n})

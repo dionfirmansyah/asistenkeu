@@ -66,3 +66,22 @@ export const idbPut = async (store: string, rec: object) => (await idb()).put(st
 export const idbDel = async (store: string, id: string) => (await idb()).delete(store as never, id);
 export const newId = (p: string) =>
   typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : p + Date.now() + Math.random();
+
+/**
+ * Cache memori sesi (stale-while-revalidate): view menginisialisasi state
+ * dari sini agar cat pertama langsung berisi data (tanpa kedip), lalu
+ * effect tetap membaca IndexedDB segar dan menyegarkan cache.
+ */
+const mem = new Map<string, unknown>();
+
+export function peekCache<T>(key: string): T | undefined {
+  return mem.get(key) as T | undefined;
+}
+
+export function rememberCache<T>(key: string, value: T): void {
+  mem.set(key, value);
+}
+
+export function bustCache(key: string): void {
+  mem.delete(key);
+}

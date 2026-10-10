@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DanaBadge, danaFill } from "@/components/ui/dana-badge";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { villageIdentity } from "@/lib/engine/identity";
@@ -171,17 +172,51 @@ export default function DashboardView() {
         </Card>
         <Card>
           <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Komposisi sumber dana (belanja)</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            <ChartContainer config={{}}>
-              <PieChart>
-                <Pie data={dana} dataKey="total" nameKey="name" innerRadius={50} outerRadius={90}>
-                  {dana.map((_, i) => (
-                    <Cell key={i} fill={["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"][i % 5]} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent formatter={(v) => rp(Number(v))} />} />
-              </PieChart>
-            </ChartContainer>
+          <CardContent className="p-3">
+            <div className="relative mx-auto h-52 w-full max-w-64">
+              <ChartContainer config={{}} className="h-full w-full">
+                <PieChart>
+                  <Pie
+                    data={dana}
+                    dataKey="total"
+                    nameKey="name"
+                    innerRadius="70%"
+                    outerRadius="100%"
+                    paddingAngle={3}
+                    cornerRadius={6}
+                    stroke="var(--background)"
+                    strokeWidth={2}
+                  >
+                    {dana.map((d) => (
+                      <Cell key={d.name} fill={danaFill(d.name)} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent formatter={(v) => rp(Number(v))} />} />
+                </PieChart>
+              </ChartContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-xs text-muted-foreground">Total belanja</div>
+                <div className="text-lg font-bold" title={rp(dana.reduce((s, x) => s + x.total, 0))}>
+                  {fmtCompact(dana.reduce((s, x) => s + x.total, 0))}
+                </div>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {dana.map((d) => {
+                const tot = dana.reduce((s, x) => s + x.total, 0);
+                const pct = tot ? Math.round((d.total / tot) * 100) : 0;
+                return (
+                  <li key={d.name} className="flex items-center gap-2 text-sm">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: danaFill(d.name) }} />
+                    <DanaBadge value={d.name} />
+                    <span className="ml-auto font-semibold">{pct}%</span>
+                    <span className="w-20 shrink-0 text-right text-xs text-muted-foreground" title={rp(d.total)}>
+                      {fmtCompact(d.total)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </CardContent>
         </Card>
         <Card>
@@ -304,7 +339,7 @@ function GroupTable({ rows, field, basis }: { rows: Parameters<typeof aggregate>
       <tbody>
         {agg.map((x) => (
           <tr key={x.name} className="border-t">
-            <td className="py-1 pr-2">{x.name}</td>
+            <td className="py-1 pr-2">{field === "SumberDana" ? <DanaBadge value={x.name} /> : x.name}</td>
             <td className="num">{nfInt0(x.nRincian)}</td>
             <td className="num">{nfInt0(x.nKeg)}</td>
             <td className="num">{rp(x.total)}</td>

@@ -1,38 +1,133 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useThemeStore } from "@/stores/theme-store";
 import { useSmdStore } from "@/stores/smd-store";
+import { villageIdentity } from "@/lib/engine/identity";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight, FileText, Landmark, Moon, Sun, User } from "lucide-react"
 import NavShell from "@/components/layout/NavShell";
-import { Moon, Sun, Upload } from "lucide-react";
+
+const initialsOf = (nama: string): string =>
+  nama
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 
 export default function App() {
   const { theme, toggle, init } = useThemeStore();
-  const { status, loadFile, fileName, flat } = useSmdStore();
+  const { loadFile, fileName, tables } = useSmdStore();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [restoring, setRestoring] = useState(true);
+  const ident = useMemo(() => villageIdentity(tables), [tables]);
 
   useEffect(() => {
     init();
-    void useSmdStore.getState().restore();
+    void useSmdStore.getState().restore().finally(() => setRestoring(false));
   }, [init]);
 
   return (
     <div id="app-root" className="min-h-svh bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b bg-card/80 px-4 py-3 backdrop-blur flex items-center justify-between">
-        <div>
-          <h1 className="font-bold leading-tight text-primary">ASISTENKEU</h1>
-          <p className="text-xs text-muted-foreground">Asisten Keuangan Desa — data Siskeudes diproses di browser</p>
+      <header className="sticky top-0 z-10 shadow-sm">
+        {/* Bar utama — biru navy khas portal DJP */}
+        <div className="bg-gradient-to-r from-[#0a2f6b] via-[#0e3d85] to-[#1352a8] text-white dark:from-[#071a3d] dark:via-[#0a2a5e] dark:to-[#0e3d85]">
+          <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-4">
+            {/* Logo + nama aplikasi */}
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#0a2f6b] shadow-sm ring-1 ring-white/30">
+                <Landmark className="size-5" />
+              </div>
+              <div className="min-w-0 leading-tight">
+                <h1 className="text-[15px] font-bold tracking-wide">ASISTENKEU</h1>
+                <p className="truncate text-[11px] text-white/70">Asisten Keuangan Desa</p>
+              </div>
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {/* File aktif */}
+              {fileName && (
+                <div
+                  className="hidden max-w-56 items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs text-white sm:flex"
+                  title={fileName}
+                >
+                  <FileText className="size-3.5 shrink-0 text-white/80" />
+                  <span className="truncate">{fileName}</span>
+                </div>
+              )}
+
+              {/* Identitas operator */}
+              {fileName && (
+                <>
+                  <div className="hidden h-8 w-px bg-white/20 md:block" />
+                  <div
+                    className="hidden min-w-0 items-center gap-2.5 md:flex"
+                    title={ident.kaur ? `Operator: ${ident.kaur}${ident.desa ? ` — Desa ${ident.desa}` : ""}` : "Operator Siskeudes"}
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white ring-1 ring-white/30">
+                      {initialsOf(ident.kaur) || <User className="size-4" />}
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                      <div className="max-w-44 truncate text-[13px] font-semibold">{ident.kaur || "Operator"}</div>
+                      <div className="max-w-44 truncate text-[11px] text-white/70">
+                        Kaur Keuangan{ident.desa ? ` · ${ident.desa}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="hidden h-8 w-px bg-white/20 sm:block" />
+
+              {/* Toggle tema */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative text-white hover:bg-white/15 hover:text-white dark:hover:bg-white/15"
+                onClick={toggle}
+                title={theme === "dark" ? "Mode terang" : "Mode gelap"}
+                aria-label={theme === "dark" ? "Mode terang" : "Mode gelap"}
+              >
+                <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={toggle}>
-          {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          {theme === "dark" ? "Mode terang" : "Mode gelap"}
-        </Button>
+
+        {/* Garis aksen kuning ala DJP */}
+        <div className="h-[3px] bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400/0" />
+
+        {/* Bar breadcrumb putih */}
+        <div className="border-b border-border bg-background">
+          <div className="mx-auto flex w-full max-w-[1440px] items-center gap-1.5 px-4 py-1.5 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Beranda</span>
+            <ChevronRight className="size-3 shrink-0" />
+            <span className="truncate">Asisten Keuangan Desa</span>
+            <span className="ml-auto flex shrink-0 items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              100% offline di browser
+            </span>
+          </div>
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-[1440px] p-4 space-y-4">
+        {restoring ? (
+          <div className="space-y-4" aria-label="Memuat data tersimpan">
+            <div className="h-24 animate-pulse rounded-lg bg-muted" />
+            <div className="h-64 animate-pulse rounded-lg bg-muted" />
+          </div>
+        ) : (
+          <>
         {!fileName && (
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Pilih atau seret file .SMD ke sini"
             className="rounded-lg border border-dashed p-8 text-center cursor-pointer"
             onClick={() => inputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -56,29 +151,11 @@ export default function App() {
           </div>
         )}
 
-        {status.text && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={
-              status.kind === "error"
-                ? "rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
-                : status.kind === "ok"
-                  ? "rounded-md border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-400"
-                  : "rounded-md border p-3 text-sm text-muted-foreground"
-            }
-          >
-            {status.text}
-          </div>
-        )}
 
-        {fileName && (
-          <div className="rounded-md border p-3 text-sm">
-            <b>File aktif:</b> {fileName} — {flat.length} baris RAB.
-          </div>
-        )}
 
         {fileName && <NavShell />}
+          </>
+        )}
       </main>
     </div>
   );

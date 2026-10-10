@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useSmdStore } from "@/stores/smd-store";
 import { useFiltersStore, applyFilters } from "@/stores/filters-store";
 import { rp, rpS } from "@/lib/engine/format";
+import { groupBy } from "@/lib/engine/util";
 import { toCSV, download, copyText } from "@/lib/csv";
 import { Button } from "@/components/ui/button";
+import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
+import type { Basis } from "@/stores/smd-store";
 import type { RabFlatRow } from "@/types/smd";
 
 const FLAT_MIN: [string, string][] = [
@@ -12,17 +15,6 @@ const FLAT_MIN: [string, string][] = [
   ["Nama_Rincian", "Nama Rincian"], ["No_Urut", "No"], ["Uraian", "Uraian"], ["SumberDana", "Sumber Dana"], ["Nm_PPTKD", "PPTKD"],
   ["JmlSatuanPAK", "Volume"], ["Satuan", "Satuan"], ["HrgSatuanPAK", "Harga Satuan"], ["Anggaran", "Semula"], ["AnggaranPAK", "Perubahan"], ["AnggaranStlhPAK", "Menjadi"],
 ];
-
-function group(rows: RabFlatRow[], fn: (r: RabFlatRow) => string): Map<string, RabFlatRow[]> {
-  const m = new Map<string, RabFlatRow[]>();
-  for (const r of rows) {
-    const k = fn(r);
-    const arr = m.get(k);
-    if (arr) arr.push(r);
-    else m.set(k, [r]);
-  }
-  return m;
-}
 
 const sortKey = (a: [string, RabFlatRow[]], b: [string, RabFlatRow[]]) => a[0].localeCompare(b[0], "id", { numeric: true });
 
@@ -49,14 +41,14 @@ export default function StrukturView() {
   const [copied, setCopied] = useState(false);
 
   const byJenis = useMemo(() => {
-    const m = group(rows, (r) => r.Jenis || "LAINNYA");
+    const m = groupBy(rows, (r) => r.Jenis || "LAINNYA");
     const order = ["PENDAPATAN", "BELANJA", "PEMBIAYAAN"];
     return [...m.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
   }, [rows]);
 
   const exportCsv = () => {
     const base = (fileName ?? "rab").replace(/\.[^.]+$/, "");
-    download(`${base}_rab_flat.csv`, toCSV(FLAT_MIN, rows as unknown as Record<string, unknown>[]));
+    download(`${base}_rab_flat.csv`, toCSV(FLAT_MIN, rows));
   };
 
   return (
@@ -72,7 +64,7 @@ export default function StrukturView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Button size="sm" variant="outline" onClick={async () => { setCopied(await copyText(toCSV(FLAT_MIN, rows as unknown as Record<string, unknown>[]))); setTimeout(() => setCopied(false), 1400); }}>
+          <Button size="sm" variant="outline" onClick={async () => { setCopied(await copyText(toCSV(FLAT_MIN, rows))); setTimeout(() => setCopied(false), 1400); }}>
             {copied ? "Tersalin" : "Salin CSV"}
           </Button>
           <Button size="sm" variant="outline" onClick={exportCsv}>Unduh CSV</Button>
@@ -83,17 +75,17 @@ export default function StrukturView() {
         <Node key={jenis} title={jenis} amt={sum(jrows, (r) => Number(r[basis]) || 0)}>
           {jenis === "BELANJA" ? (
             // BELANJA: Bidang → Sub Bidang → Kegiatan → Rincian → item
-            [...group(jrows.filter((r) => !r.Pseudo), (r) => `${r.Kd_Bid}|${r.Nama_Bidang}`)].sort(sortKey).map(([bk, br]) => {
+            [...groupBy(jrows.filter((r) => !r.Pseudo), (r) => `${r.Kd_Bid}|${r.Nama_Bidang}`)].sort(sortKey).map(([bk, br]) => {
               const [bc, bn] = bk.split("|");
               return (
                 <Node key={bk} title={`${bc} — ${bn}`} amt={sum(br, (r) => Number(r[basis]) || 0)}>
-                  {[...group(br, (r) => `${r.Kd_Sub}|${r.Nama_SubBidang}`)].sort(sortKey).map(([sk, sr]) => {
+                  {[...groupBy(br, (r) => `${r.Kd_Sub}|${r.Nama_SubBidang}`)].sort(sortKey).map(([sk, sr]) => {
                     const [sc, sn] = sk.split("|");
                     return (
                       <Node key={sk} title={`${sc} — ${sn}`} amt={sum(sr, (r) => Number(r[basis]) || 0)}>
-                        {[...group(sr, (r) => r.Kd_Keg)].sort(sortKey).map(([kk, kr]) => (
+                        {[...groupBy(sr, (r) => r.Kd_Keg)].sort(sortKey).map(([kk, kr]) => (
                           <Node key={kk} title={`${kr[0].ID_Keg || kk} — ${kr[0].Nama_Kegiatan}`} amt={sum(kr, (r) => Number(r[basis]) || 0)}>
-                            {[...group(kr, (r) => `${r.Kd_SubRinci}|${r.Nama_Rincian}`)].sort(sortKey).map(([rk, rr]) => {
+                            {[...groupBy(kr, (r) => `${r.Kd_SubRinci}|${r.Nama_Rincian}`)].sort(sortKey).map(([rk, rr]) => {
                               const [rc, rn] = rk.split("|");
                               return (
                                 <Node key={rk} title={`${rc} — ${rn}`} amt={sum(rr, (r) => Number(r[basis]) || 0)}>
@@ -110,12 +102,8 @@ export default function StrukturView() {
               );
             })
           ) : (
-            // PENDAPATAN / PEMBIAYAAN: kode rekening → item
-            [...group(jrows, (r) => r.Kd_Rincian || "-")].sort(sortKey).map(([kd, rr]) => (
-              <Node key={kd} title={`${kd}`} amt={sum(rr, (r) => Number(r[basis]) || 0)}>
-                {rr.map((r) => <ItemRow key={r._id} r={r} basis={basis} />)}
-              </Node>
-            ))
+            // PENDAPATAN / PEMBIAYAAN: sedikit baris, tampilkan langsung tanpa level grup
+            jrows.map((r) => <ItemRow key={r._id} r={r} basis={basis} />)
           )}
         </Node>
       ))}
@@ -124,7 +112,7 @@ export default function StrukturView() {
   );
 }
 
-function Node({ title, amt, children }: { title: string; amt: number; children?: React.ReactNode }) {
+function Node({ title, amt, children }: { title: string; amt: number; children?: ReactNode }) {
   return (
     <details className="rounded-md border bg-card">
       <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm">
@@ -136,18 +124,22 @@ function Node({ title, amt, children }: { title: string; amt: number; children?:
   );
 }
 
-function ItemRow({ r, basis }: { r: RabFlatRow; basis: string }) {
+function ItemRow({ r, basis }: { r: RabFlatRow; basis: Basis }) {
   return (
     <details className="rounded-md border border-dashed">
       <summary className="flex cursor-pointer items-center justify-between px-3 py-1.5 text-xs">
         <span>
-          <b>{r.No_Urut}.</b> {r.Uraian}
+          {r.Pseudo ? (
+            <><b>{r.Kd_Rincian}</b> {r.Uraian || r.Nama_Rincian_Label}</>
+          ) : (
+            <><b>{r.No_Urut}.</b> {r.Uraian}</>
+          )}
           {r.Asal === "SILPA" && <span className="ml-1 rounded bg-secondary px-1 text-[10px]">SiLPA</span>}
         </span>
         <span className="font-semibold">{rp(Number(r[basis]) || 0)}</span>
       </summary>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 px-3 pb-2 text-xs text-muted-foreground md:grid-cols-4">
-        <div>Sumber dana: <b>{r.SumberDana || "-"}</b></div>
+        <div>Sumber dana: <DanaBadge value={r.SumberDana} emptyLabel="-" /></div>
         <div>PPTKD: <b>{r.Nm_PPTKD || "-"}</b></div>
         <div>Volume: <b>{r.JmlSatuanPAK} {r.Satuan} × {rp(r.HrgSatuanPAK)}</b></div>
         <div>Semula: <b>{rp(r.Anggaran)}</b> · Perubahan: <b>{rpS(r.AnggaranPAK)}</b> · Menjadi: <b>{rp(r.AnggaranStlhPAK)}</b></div>

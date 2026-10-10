@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { useSmdStore } from "@/stores/smd-store";
-import { idbAll, idbPut, idbDel, newId, type RpdDoc, type RpdEntry } from "@/lib/storage/idb";
+import { idbAll, idbPut, idbDel, newId, peekCache, rememberCache, type RpdDoc, type RpdEntry } from "@/lib/storage/idb";
 import { nfInt0, nf0, rp } from "@/lib/engine/format";
 import { download } from "@/lib/csv";
 import { buildRpdExcelDoc } from "./excel";
 import { buildRpdJson, parseRpdJson } from "./jsonFile";
 import { Button } from "@/components/ui/button";
+import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +37,6 @@ const scopeOf = (flat: RabFlatRow[]) => (flat[0] ? `${flat[0].Kd_Desa}-${flat[0]
 export default function RpdView() {
   const { flat, fileName, tables } = useSmdStore();
   const scope = scopeOf(flat);
-  const [docs, setDocs] = useState<RpdDoc[]>([]);
-  const [entries, setEntries] = useState<RpdEntry[]>([]);
   const [keg, setKeg] = useState("");
   const [rinc, setRinc] = useState("");
   const [search, setSearch] = useState("");
@@ -63,6 +62,13 @@ export default function RpdView() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
+
+  // Cat awal dari cache memori (anti-kedip); effect di bawah tetap baca segar.
+  const [docs, setDocs] = useState<RpdDoc[]>(() => peekCache<RpdDoc[]>(`docs:${scope}`) ?? []);
+  const [entries, setEntries] = useState<RpdEntry[]>(() => {
+    const all = peekCache<RpdEntry[]>(`entries:${scope}`) ?? [];
+    return all.filter((e) => (docId ? e.docId === docId : false));
+  });
 
   // Indeks item belanja (sesudah PAK)
   const { items, kegs, rincByKeg } = useMemo(() => {
@@ -97,8 +103,10 @@ export default function RpdView() {
 
   const reload = async () => {
     const ds = (await idbAll<RpdDoc>("docs", scope)).sort((a, b) => (b.updated || b.ts || 0) - (a.updated || a.ts || 0));
+    rememberCache(`docs:${scope}`, ds);
     setDocs(ds);
     const ents = await idbAll<RpdEntry>("entries", scope);
+    rememberCache(`entries:${scope}`, ents);
     setEntries(ents.filter((e) => (docId ? e.docId === docId : false)));
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,7 +397,7 @@ export default function RpdView() {
                     <div className="truncate font-medium">{it.r.Uraian}</div>
                     <div className="truncate text-xs text-muted-foreground">{it.kegKd} · {it.r.Kd_Rincian || ""}</div>
                   </div>
-                  <span className="shrink-0 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">{it.r.SumberDana || "Tanpa sumber dana"}</span>
+                  <DanaBadge value={it.r.SumberDana} />
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
                   <StatChip label="Harga" value={rp(it.price)} />
@@ -636,7 +644,7 @@ function RpdPlanTable({
                                 <td className="border px-2 py-1 text-center">{no++}</td>
                                 <td className="border px-2 py-1"></td>
                                 <td className="border px-2 py-1 pl-8">• {it ? it.r.Uraian : x.key}{x.bln !== null && <span className="ml-1 text-xs text-muted-foreground">({BLN[x.bln]})</span>}</td>
-                                <td className="border px-2 py-1 text-center">{it?.r.SumberDana || "-"}</td>
+                                <td className="border px-2 py-1 text-center"><DanaBadge value={it?.r.SumberDana} emptyLabel="-" /></td>
                                 <td className="border px-2 py-1 text-center">
                                   {editing ? (
                                     <Input className="h-7 w-20 text-xs" type="number" value={editVol} onChange={(e) => { setEditVol(e.target.value); const v = Number(e.target.value) || 0; setEditAmt(String(Math.round(v * (it?.price ?? 0)))); }} />

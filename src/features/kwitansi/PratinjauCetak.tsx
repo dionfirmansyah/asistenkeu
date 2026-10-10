@@ -42,13 +42,15 @@ export function PratinjauCetak({
   banyak?: KwitansiData[];
   onCetakBanyak?: (ds: KwitansiData[]) => void;
 }) {
-  const pertama = banyak?.[0] ?? awal!;
-  const [tgl, setTgl] = useState(pertama.tanggal || hariIni());
+  const pertama = banyak?.[0] ?? awal;
+  const [tgl, setTgl] = useState(pertama?.tanggal || hariIni());
   const [jam, setJam] = useState(jamIni());
-  const [kabupaten, setKabupaten] = useState(pertama.kabupaten);
-  const [ppn, setPpn] = useState(pertama.potongan.ppn);
-  const [pph, setPph] = useState(pertama.potongan.pph);
-  const [lainnya, setLainnya] = useState(pertama.potongan.lainnya);
+  const [kabupaten, setKabupaten] = useState(pertama?.kabupaten ?? "");
+  const [ppn, setPpn] = useState(pertama?.potongan.ppn ?? 0);
+  const [pph, setPph] = useState(pertama?.potongan.pph ?? 0);
+  const [lainnya, setLainnya] = useState(pertama?.potongan.lainnya ?? 0);
+
+  if (!pertama) return null;
 
   const terapkan = (d: KwitansiData): KwitansiData => ({
     ...d,

@@ -1,24 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Buffer } from "buffer";
-import MdbReader from "mdb-reader";
 import { useSmdStore } from "@/stores/smd-store";
-import { idb, idbAll, idbPut, type PajakManual } from "@/lib/storage/idb";
-import { decodeSmd, hasJetMagic } from "@/lib/engine/decode";
+import { idb, idbAll, bustCache, peekCache, rememberCache, type PajakManual } from "@/lib/storage/idb";
+import { readSppFile, type SppRec } from "@/lib/sppFile";
 import { vt } from "@/lib/engine/util";
 import { rp } from "@/lib/engine/format";
 import { download } from "@/lib/csv";
 import { downloadBase64, patchSpp, serverStatus } from "@/lib/sppServer";
 import { writeJsonToFolder } from "@/lib/storage/fsdir";
 import { Button } from "@/components/ui/button";
+import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { buktiKeKwitansi, KwitansiPengeluaran, PratinjauCetak } from "@/features/kwitansi";
 import { createPortal } from "react-dom";
-import { Printer } from "lucide-react";
+import { Printer, Wallet } from "lucide-react";
 import type { KwitansiData } from "@/features/kwitansi";
 import type { Row } from "@/types/smd";
-import { Wallet } from "lucide-react";
 
 const tglID = (v: unknown) => {
   const d = vt(v);
@@ -30,21 +28,10 @@ const linkOf = (v: unknown) => {
   return m ? m[0] : "";
 };
 
-interface SppRec {
-  name: string;
-  reg: Row[];
-  rinci?: Row[];
-  bukti: Row[];
-  pot: Row[];
-  nSpp: number;
-  /** Byte .smd asli (base64) — dikirim ke server lokal saat ekspor .smd */
-  raw?: string;
-}
-
 export default function SppView() {
   const { flat, tables } = useSmdStore();
-  const [spp, setSpp] = useState<SppRec | null>(null);
-  const [edits, setEdits] = useState<Map<string, { id: string; table: string; keys: Record<string, string>; fields: Record<string, { orig: unknown; edit: unknown }>; updatedAt: string }>>(new Map());
+  const [spp, setSpp] = useState<SppRec | null>(() => peekCache<SppRec>("src:spp") ?? null);
+  const [edits, setEdits] = useState<Map<string, { id: string; table: string; keys: Record<string, string>; fields: Record<string, { orig: unknown; edit: unknown }>; updatedAt: string }>>(() => peekCache("edits:all") ?? new Map());
   const [dana, setDana] = useState("");
   const [penerima, setPenerima] = useState("");
   const [kegFilter, setKegFilter] = useState("");
@@ -63,14 +50,17 @@ export default function SppView() {
   const loadEdits = async () => {
     const db = await idb();
     const rows = (await db.getAll("sppEdits")) as Array<{ id: string; table: string; keys: Record<string, string>; fields: Record<string, { orig: unknown; edit: unknown }>; updatedAt: string }>;
-    setEdits(new Map(rows.map((e) => [e.id, e])));
+    const m = new Map(rows.map((e) => [e.id, e]));
+    rememberCache("edits:all", m);
+    setEdits(m);
   };
 
   useEffect(() => {
     void loadEdits();
-    // restore SPP dari IndexedDB
+    // restore SPP dari IndexedDB (cat awal dari cache memori agar tak berkedip)
     void idb().then(async (db) => {
-      const rec = (await db.get("sourceFiles", "spp")) as SppRec | null;
+      const rec = (await db.get("sourceFiles", "spp")) as (SppRec & { savedAt?: number }) | undefined;
+      rememberCache("src:spp", rec ?? null);
       if (rec) setSpp(rec);
     });
     void refreshServer();
@@ -79,29 +69,9 @@ export default function SppView() {
   const processFile = async (file: File) => {
     setMsg("Membaca file SPP…");
     try {
-      const ab = await file.arrayBuffer();
-      const dec = decodeSmd(new Uint8Array(ab));
-      if (!hasJetMagic(dec)) throw new Error("Header hasil dekode bukan Jet4. Ini kemungkinan bukan file .SMD Siskeudes.");
-      const rd = new MdbReader(Buffer.from(dec));
-      const get = (n: string) => { try { return rd.getTable(n).getData(); } catch { return []; } };
-      const reg = get("Ta_SPP") as Row[];
-      const rinci = get("Ta_SPPRinci") as Row[];
-      const bukti = get("Ta_SPPBukti") as Row[];
-      const pot = get("Ta_SPPPot") as Row[];
-      if (!reg.length) throw new Error("Tabel Ta_SPP kosong atau tidak ditemukan.");
-      let raw = "";
-      try {
-        const bin = new Uint8Array(ab);
-        let s = "";
-        for (let i = 0; i < bin.length; i++) s += String.fromCharCode(bin[i]);
-        raw = btoa(s);
-      } catch {
-        raw = "";
-      }
-      const rec: SppRec = { name: file.name, reg, rinci, bukti, pot, nSpp: reg.length, raw };
+      const rec = await readSppFile(file);
       setSpp(rec);
-      await idbPut("sourceFiles", { type: "spp", ...rec, savedAt: Date.now() });
-      setMsg(`${file.name}: ${reg.length.toLocaleString("id-ID")} SPP, ${bukti.length.toLocaleString("id-ID")} kwitansi.`);
+      setMsg(`${file.name}: ${rec.reg.length.toLocaleString("id-ID")} SPP, ${rec.bukti.length.toLocaleString("id-ID")} kwitansi.`);
     } catch (e) {
       setMsg("Gagal membaca file SPP: " + (e instanceof Error ? e.message : String(e)));
     }
@@ -111,7 +81,9 @@ export default function SppView() {
     const m = new Map<string, Row[]>();
     for (const b of spp?.bukti ?? []) {
       const k = vt(b.No_SPP);
-      (m.get(k) ?? m.set(k, []).get(k)!).push(b);
+      const arr = m.get(k);
+      if (arr) arr.push(b);
+      else m.set(k, [b]);
     }
     return m;
   }, [spp]);
@@ -120,7 +92,9 @@ export default function SppView() {
     const m = new Map<string, Row[]>();
     for (const p of spp?.pot ?? []) {
       const k = `${vt(p.No_SPP)}¦${vt(p.No_Bukti)}`;
-      (m.get(k) ?? m.set(k, []).get(k)!).push(p);
+      const arr = m.get(k);
+      if (arr) arr.push(p);
+      else m.set(k, [p]);
     }
     return m;
   }, [spp]);
@@ -203,7 +177,9 @@ export default function SppView() {
     const rec = { id, table, keys, fields, updatedAt: new Date().toISOString() };
     const db = await idb();
     await db.put("sppEdits", rec);
-    setEdits(new Map(edits).set(id, rec));
+    const m = new Map(edits).set(id, rec);
+    rememberCache("edits:all", m);
+    setEdits(m);
     setEditCtx(null);
   };
 
@@ -357,7 +333,7 @@ export default function SppView() {
               <Input className="h-7 w-40 text-xs" type="password" value={smdPassword} onChange={(e) => setSmdPassword(e.target.value)} placeholder="opsional" />
             </label>
           )}
-          {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!window.confirm("Hapus semua edit lokal?")) return; const db = await idb(); await db.clear("sppEdits"); setEdits(new Map()); }}>Hapus semua edit</Button>}
+          {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!window.confirm("Hapus semua edit lokal?")) return; const db = await idb(); await db.clear("sppEdits"); bustCache("edits:all"); setEdits(new Map()); }}>Hapus semua edit</Button>}
           {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
         </CardContent>
       </Card>
@@ -485,7 +461,7 @@ export default function SppView() {
                           </div>
                           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
                             <span>Tgl {tglID(nb.Tgl_Bukti)}</span>
-                            <span className="rounded-full bg-secondary px-2 py-0.5">{vt(nb.Sumberdana) || "tanpa sumber dana"}</span>
+                            <DanaBadge value={vt(nb.Sumberdana)} />
                             {linkOf(nb.link_bukti) && <a className="text-primary underline" href={linkOf(nb.link_bukti)} target="_blank" rel="noreferrer">bukti</a>}
                           </div>
                           {pots.map((p, pi) => (
