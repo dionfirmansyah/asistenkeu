@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import DashboardView from "@/features/dashboard/DashboardView";
-import StrukturView from "@/features/struktur/StrukturView";
-import RawView from "@/features/raw/RawView";
-import ValidasiView from "@/features/validasi/ValidasiView";
-import RpdView from "@/features/rpd/RpdView";
-import SisaView from "@/features/sisa/SisaView";
-import SppView from "@/features/spp/SppView";
-import PajakView from "@/features/pajak/PajakView";
-import RekonView from "@/features/rekon/RekonView";
-import RekapPajakView from "@/features/rekap-pajak/RekapPajakView";
-import SppDataView from "@/features/spp-data/SppDataView";
-import PajakDataView from "@/features/pajak-data/PajakDataView";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+const DashboardView = lazy(() => import("@/features/dashboard/DashboardView"));
+const StrukturView = lazy(() => import("@/features/struktur/StrukturView"));
+const RawView = lazy(() => import("@/features/raw/RawView"));
+const ValidasiView = lazy(() => import("@/features/validasi/ValidasiView"));
+const RpdView = lazy(() => import("@/features/rpd/RpdView"));
+const SisaView = lazy(() => import("@/features/sisa/SisaView"));
+const SppView = lazy(() => import("@/features/spp/SppView"));
+const PajakView = lazy(() => import("@/features/pajak/PajakView"));
+const RekonView = lazy(() => import("@/features/rekon/RekonView"));
+const RekapPajakView = lazy(() => import("@/features/rekap-pajak/RekapPajakView"));
+const SppDataView = lazy(() => import("@/features/spp-data/SppDataView"));
+const PajakDataView = lazy(() => import("@/features/pajak-data/PajakDataView"));
 import { useSmdStore } from "@/stores/smd-store";
 import { idb, peekCache } from "@/lib/storage/idb";
 import { readSppFile } from "@/lib/sppFile";
 import { readPajakFile } from "@/lib/pajakFile";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -116,23 +117,33 @@ export default function NavShell() {
   const gantiSpp = (f: File) => {
     setFileMsg("Membaca file SPP…");
     void readSppFile(f).then(
-      () => {
+      (rec) => {
         setFileMsg("");
         refreshFiles();
         setFileBump((b) => b + 1);
+        toast.success(`File SPP dimuat — ${rec.reg.length} SPP, ${rec.bukti.length} kwitansi.`);
       },
-      (e) => setFileMsg("Gagal membaca file SPP: " + (e instanceof Error ? e.message : String(e))),
+      (e) => {
+        const msg = "Gagal membaca file SPP: " + (e instanceof Error ? e.message : String(e));
+        setFileMsg(msg);
+        toast.error(msg, { duration: Infinity });
+      },
     );
   };
   const gantiPajak = (f: File) => {
     setFileMsg("Membaca file pajak…");
     void readPajakFile(f).then(
-      () => {
+      (rec) => {
         setFileMsg("");
         refreshFiles();
         setFileBump((b) => b + 1);
+        toast.success(`File pajak dimuat — ${rec.pajak.length} SSP.`);
       },
-      (e) => setFileMsg("Gagal membaca file pajak: " + (e instanceof Error ? e.message : String(e))),
+      (e) => {
+        const msg = "Gagal membaca file pajak: " + (e instanceof Error ? e.message : String(e));
+        setFileMsg(msg);
+        toast.error(msg, { duration: Infinity });
+      },
     );
   };
 
@@ -194,6 +205,7 @@ export default function NavShell() {
 
       <div className="min-w-0 flex-1 px-4 pb-24 pt-4 md:px-6 md:pb-6">
       <section key={fileBump}>
+        <Suspense fallback={<ViewFallback />}>
         {active === "dashboard" ? (
           <DashboardView />
         ) : active === "struktur" ? (
@@ -224,6 +236,7 @@ export default function NavShell() {
             <p className="text-sm text-muted-foreground">Modul belum dibangun — Fase berikutnya.</p>
           </div>
         )}
+        </Suspense>
       </section>
       </div>
 
@@ -274,6 +287,20 @@ export default function NavShell() {
           </button>
         </div>
       </nav>
+    </div>
+  );
+}
+
+function ViewFallback() {
+  return (
+    <div className="space-y-4" aria-label="Memuat halaman">
+      <div className="h-8 w-56 animate-pulse rounded-md bg-muted" />
+      <div className="grid gap-2 md:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+      <div className="h-64 animate-pulse rounded-lg bg-muted" />
     </div>
   );
 }

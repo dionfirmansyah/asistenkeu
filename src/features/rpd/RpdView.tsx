@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { useSmdStore } from "@/stores/smd-store";
-import { idbAll, idbPut, idbDel, newId, peekCache, rememberCache, type RpdDoc, type RpdEntry } from "@/lib/storage/idb";
+import { idbAll, idbPut, idbDel, newId, peekCache, rememberCache, type DocStatus, type RpdDoc, type RpdEntry } from "@/lib/storage/idb";
 import { nfInt0, nf0, rp } from "@/lib/engine/format";
 import { download } from "@/lib/csv";
 import { buildRpdExcelDoc } from "./excel";
@@ -10,10 +10,13 @@ import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ComboboxField } from "@/components/ui/combobox";
+import { useConfirm } from "@/hooks/use-confirm";
 import { buildRpdPrintDoc, rekName } from "./print";
 import { ArrowLeft, Eraser, FileDown, FileSpreadsheet, FileUp, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { RabFlatRow, SmdTables } from "@/types/smd";
@@ -34,6 +37,14 @@ interface RpdItem {
 
 const scopeOf = (flat: RabFlatRow[]) => (flat[0] ? `${flat[0].Kd_Desa}-${flat[0].Tahun}` : "default");
 
+const docStatus = (d: RpdDoc): DocStatus => d.status ?? "draft";
+
+const STATUS_COLS: Array<{ id: DocStatus; label: string; tone: StatusTone }> = [
+  { id: "draft", label: "Draf", tone: "warning" },
+  { id: "progress", label: "Berjalan", tone: "info" },
+  { id: "done", label: "Selesai", tone: "success" },
+];
+
 export default function RpdView() {
   const { flat, fileName, tables } = useSmdStore();
   const scope = scopeOf(flat);
@@ -46,6 +57,7 @@ export default function RpdView() {
     amts[it.key] !== undefined && amts[it.key] !== "" ? Number(amts[it.key].replace(/\./g, "").replace(",", ".")) || 0 : Math.round((Number(vols[it.key]) || 0) * it.price);
   const [bulan, setBulan] = useState("");
   const [modal, setModal] = useState<"new" | "edit" | null>(null);
+  const { confirmNode, confirm, notify } = useConfirm();
   const [ioMsg, setIoMsg] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -112,12 +124,27 @@ export default function RpdView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void reload(); }, [scope, docId]);
 
+  const moveDoc = async (id: string, status: DocStatus) => {
+    const cur = docs.find((x) => x.id === id);
+    if (!cur || docStatus(cur) === status) return;
+    const next = { ...cur, status, updated: Date.now() };
+    await idbPut("docs", next);
+    const ds = docs.map((x) => (x.id === id ? next : x));
+    rememberCache(`docs:${scope}`, ds);
+    setDocs(ds);
+    const label = STATUS_COLS.find((c) => c.id === status)?.label ?? status;
+    const msg = `RPD "${cur.name || cur.judul || "RPD"}" dipindahkan ke ${label}.`;
+    if (status === "done") toast.success(msg);
+    else if (status === "progress") toast.info(msg);
+    else toast.warning(msg);
+  };
+
   const doc = docs.find((d) => d.id === docId) ?? null;
   const usedOf = (key: string) =>
     entries.filter((e) => e.key === key).reduce((a, x) => ({ vol: a.vol + x.vol, amt: a.amt + x.amt }), { vol: 0, amt: 0 });
 
   const addAll = async () => {
-    if (!docId) return window.alert("Buat atau pilih RPD terlebih dahulu.");
+    if (!docId) { await notify({ title: "Belum ada RPD aktif", description: "Buat atau pilih RPD terlebih dahulu." }); return; }
     let added = 0;
     const errors: string[] = [];
     for (const it of visible) {
@@ -138,8 +165,9 @@ export default function RpdView() {
       await idbPut("entries", { id: newId("p"), scope, docId, key: it.key, bln, vol, amt, ts: Date.now() });
       added++;
     }
-    if (!added && !errors.length) window.alert("Isi volume pada minimal satu item belanja terlebih dahulu.");
-    else if (errors.length) window.alert(`${added} item ditambahkan. Sebagian item tidak ditambahkan:\n${errors.join("\n")}`);
+    if (!added && !errors.length) { await notify({ title: "Belum ada volume", description: "Isi volume pada minimal satu item belanja terlebih dahulu." }); }
+        else if (errors.length) { await notify({ title: `${added} item ditambahkan`, description: `Sebagian item tidak ditambahkan:\n${errors.join("\n")}` }); }
+    else toast.success(`${added} item rencana ditambahkan.`);
     setVols({});
     setAmts({});
     await reload();
@@ -175,6 +203,7 @@ export default function RpdView() {
     const suffix = (doc.name || "rencana_penggunaan").toLowerCase().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
     download(`${base}_${suffix || "rencana_penggunaan"}.rpd.json`, buildRpdJson(doc, rows, fileName ?? ""), "application/json");
     setIoMsg(`Diekspor ${rows.length} baris rencana.`);
+    toast.success(`Berkas JSON diekspor — ${rows.length} baris rencana.`);
   };
 
   const exportExcel = () => {
@@ -187,13 +216,14 @@ export default function RpdView() {
       "application/vnd.ms-excel;charset=utf-8",
     );
     setIoMsg(`Diekspor ke Excel (${rows.length} baris rencana).`);
+    toast.success(`Berkas Excel diekspor — ${rows.length} baris rencana.`);
   };
 
   const importJson = async (file: File) => {
     try {
       const parsed = parseRpdJson(await file.text());
       if (parsed.doc.scope !== scope) {
-        if (!window.confirm(`File ini untuk scope ${parsed.doc.scope}, sedangkan file aktif berscope ${scope}. Tetap impor?`)) return;
+        if (!(await confirm({ title: "Impor ke scope berbeda?", description: `File ini untuk scope ${parsed.doc.scope}, sedangkan file aktif berscope ${scope}.`, confirmLabel: "Tetap impor" }))) return;
       }
       await idbPut("docs", { ...parsed.doc, scope, updated: Date.now() });
       const lama = await idbAll<RpdEntry>("entries", scope);
@@ -202,10 +232,13 @@ export default function RpdView() {
         await idbPut("entries", { ...e, scope, docId: parsed.doc.id });
       }
       setIoMsg(`Diimpor ${parsed.entries.length} baris rencana ke "${parsed.doc.name}".`);
+      toast.success(`Diimpor ${parsed.entries.length} baris rencana ke "${parsed.doc.name}".`);
       if (parsed.doc.id !== docId) window.location.hash = `/rpd/${parsed.doc.id}`;
       else await reload();
     } catch (e) {
-      setIoMsg("Gagal impor: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal impor: " + (e instanceof Error ? e.message : String(e));
+      setIoMsg(msg);
+      toast.error(msg, { duration: Infinity });
     }
   };
 
@@ -213,6 +246,7 @@ export default function RpdView() {
     // ---- Daftar RPD ----
     return (
       <div className="space-y-4">
+      {confirmNode}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-primary">Rencana penggunaan</h2>
@@ -223,53 +257,102 @@ export default function RpdView() {
         {!docs.length && (
           <p className="text-sm text-muted-foreground">Belum ada RPD. Klik <b>RPD Baru</b> untuk membuat dokumen rencana penggunaan dana.</p>
         )}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {docs.map((d) => (
-            <div key={d.id} className="relative rounded-lg border transition hover:bg-accent">
-              <button
-                type="button"
-                onClick={() => { window.location.hash = `/rpd/${d.id}`; }}
-                className="block w-full p-4 text-left"
-              >
-                <div className="font-semibold">{d.name || d.judul || "RPD"}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Desa {d.desa || "-"} · Kecamatan {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Diperbarui {new Date(d.updated || d.ts).toLocaleString("id-ID")}
-                </div>
-              </button>
-              <button
-                type="button"
-                title="Hapus RPD"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!window.confirm(`Hapus RPD "${d.name}" beserta seluruh rencananya?`)) return;
-                  const ents = await idbAll<RpdEntry>("entries", scope);
-                  for (const en of ents.filter((x) => x.docId === d.id)) await idbDel("entries", en.id);
-                  await idbDel("docs", d.id);
-                  await reload();
+        <div className="grid items-start gap-3 md:grid-cols-3">
+          {STATUS_COLS.map((col) => {
+            const colDocs = docs.filter((d) => docStatus(d) === col.id);
+            return (
+              <div
+                key={col.id}
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("text/plain");
+                  if (id) void moveDoc(id, col.id);
                 }}
-                className="absolute right-3 top-3 rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                className="flex min-h-[calc(100svh-var(--header-h)-7rem)] flex-col gap-2 rounded-lg border bg-muted/40 p-2"
               >
-                Hapus
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <StatusBadge tone={col.tone}>{col.label}</StatusBadge>
+                  <span className="text-xs text-muted-foreground">{colDocs.length}</span>
+                </div>
+                {colDocs.map((d) => (
+                  <div
+                    key={d.id}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move"; }}
+                    className="rounded-lg border bg-card p-3 shadow-sm transition hover:border-primary/30"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { window.location.hash = `/rpd/${d.id}`; }}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="truncate font-semibold">{d.name || d.judul || "RPD"}</div>
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                          Desa {d.desa || "-"} · Kecamatan {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
+                        </div>
+                      </button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                        title="Hapus RPD"
+                        aria-label="Hapus RPD"
+                        onClick={async () => {
+                          if (!(await confirm({ title: `Hapus RPD "${d.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
+                          const ents = await idbAll<RpdEntry>("entries", scope);
+                          for (const en of ents.filter((x) => x.docId === d.id)) await idbDel("entries", en.id);
+                          await idbDel("docs", d.id);
+                          await reload();
+                          toast.success(`Dokumen RPD "${d.name}" dihapus.`);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-2">
+                      <StatusBadge tone={col.tone}>{col.label}</StatusBadge>
+                    </div>
+                  </div>
+                ))}
+                {!colDocs.length && (
+                  <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
+                    Belum ada — seret kartu ke sini
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
-        <RpdDocDialog modal={modal} setModal={setModal} doc={null} scope={scope} flat={flat} tables={tables} onSaved={(d) => { setModal(null); window.location.hash = `/rpd/${d.id}`; void reload(); }} />
+        <RpdDocDialog modal={modal} setModal={setModal} doc={null} scope={scope} flat={flat} tables={tables} onSaved={(d) => { setModal(null); window.location.hash = `/rpd/${d.id}`; void reload(); toast.success(`Dokumen RPD "${d.name}" disimpan.`); }} />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {confirmNode}
       {/* Doc bar */}
       <Card>
         <CardContent className="space-y-2 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => { window.location.hash = "/rpd"; }}><ArrowLeft className="size-3.5" /> Daftar RPD</Button>
             <b>{doc?.name || "RPD"}</b>
+            {doc && (
+              <StatusBadge tone={STATUS_COLS.find((c) => c.id === docStatus(doc))?.tone ?? "warning"}>
+                {STATUS_COLS.find((c) => c.id === docStatus(doc))?.label ?? "Draf"}
+              </StatusBadge>
+            )}
+            <select
+              className="h-8 rounded-md border border-input bg-card px-1 text-xs"
+              value={doc ? docStatus(doc) : "draft"}
+              aria-label="Ubah status"
+              disabled={!doc}
+              onChange={(e) => { if (doc) void moveDoc(doc.id, e.target.value as DocStatus); }}
+            >
+              {STATUS_COLS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
             <span className="text-xs text-muted-foreground">
               {doc ? `Desa ${doc.desa || "-"}, Kecamatan ${doc.kecamatan || "-"}, Tahun ${doc.tahun || "-"}.` : ""}
             </span>
@@ -279,16 +362,18 @@ export default function RpdView() {
             <Button size="sm" variant="outline" onClick={() => setModal("new")}><Plus className="size-3.5" /> Baru</Button>
             <Button size="sm" variant="outline" onClick={() => setModal("edit")} disabled={!doc}><Pencil className="size-3.5" /> Edit</Button>
             <Button size="sm" variant="outline" disabled={!entries.length} onClick={async () => {
-              if (!entries.length || !window.confirm(`Hapus semua rencana pada ${doc?.name || "RPD aktif"}?`)) return;
+              if (!entries.length || !(await confirm({ title: `Hapus semua rencana pada ${doc?.name || "RPD aktif"}?`, description: "Seluruh baris rencana ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
               for (const e of entries) await idbDel("entries", e.id);
               await reload();
+              toast.success("Semua rencana dihapus.");
             }}><Eraser className="size-3.5" /> Kosongkan</Button>
             <Button size="sm" variant="destructive" disabled={!doc} onClick={async () => {
-              if (!doc || !window.confirm(`Hapus RPD "${doc.name}" beserta seluruh rencananya?`)) return;
+              if (!doc || !(await confirm({ title: `Hapus RPD "${doc.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
               for (const e of entries) await idbDel("entries", e.id);
               await idbDel("docs", doc.id);
               window.location.hash = "/rpd";
               await reload();
+              toast.success(`Dokumen RPD "${doc.name}" dihapus.`);
             }}><Trash2 className="size-3.5" /> Hapus RPD</Button>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
@@ -305,10 +390,10 @@ export default function RpdView() {
             </label>
             <Button size="sm" variant="outline" onClick={exportJson}><FileDown className="size-3.5" /> Ekspor JSON</Button>
             <Button size="sm" variant="outline" onClick={exportExcel}><FileSpreadsheet className="size-3.5" /> Ekspor Excel</Button>
-            <Button size="sm" variant="outline" onClick={() => {
+            <Button size="sm" variant="outline" onClick={async () => {
               if (!doc) return;
               const win = window.open("", "_blank");
-              if (!win) { window.alert("Popup diblokir browser. Izinkan popup untuk situs ini agar dokumen bisa dicetak."); return; }
+              if (!win) { await notify({ title: "Popup diblokir", description: "Izinkan popup untuk situs ini agar dokumen bisa dicetak." }); return; }
               win.document.write(buildRpdPrintDoc(doc, { entries, ridx: { keg: new Map([...kegs.entries()].map(([kd, name]) => [kd, { name }])), items } }));
               win.document.close();
             }}><Printer className="size-3.5" /> Cetak</Button>
@@ -502,7 +587,7 @@ export default function RpdView() {
       </div>
 
       {/* Modal dokumen */}
-      <RpdDocDialog modal={modal} setModal={setModal} doc={doc} scope={scope} flat={flat} tables={tables} onSaved={(d) => { setModal(null); if (modal === "new") window.location.hash = `/rpd/${d.id}`; void reload(); }} />
+      <RpdDocDialog modal={modal} setModal={setModal} doc={doc} scope={scope} flat={flat} tables={tables} onSaved={(d) => { setModal(null); if (modal === "new") window.location.hash = `/rpd/${d.id}`; void reload(); toast.success(`Dokumen RPD "${d.name}" disimpan.`); }} />
     </div>
   );
 }
@@ -549,6 +634,7 @@ function RpdPlanTable({
   const [editBln, setEditBln] = useState("");
   const [editAmt, setEditAmt] = useState("");
   const [planSearch, setPlanSearch] = useState("");
+  const { confirmNode, notify } = useConfirm();
 
   const filteredRows = planSearch.trim()
     ? rows.filter((x) => {
@@ -576,6 +662,7 @@ function RpdPlanTable({
 
   return (
     <div className="space-y-2">
+      {confirmNode}
       <Input
         className="h-8 w-72 text-xs"
         placeholder="Cari kegiatan / uraian / sumber dana…"
@@ -677,16 +764,17 @@ function RpdPlanTable({
                                           const usedLain = rows.filter((y) => y.key === x.key && y.id !== x.id);
                                           const usedVolLain = usedLain.reduce((s, y) => s + y.vol, 0);
                                           if (usedVolLain + vol > it.vol + 1e-9) {
-                                            window.alert(`Volume melebihi sisa volume RAB. Sisa: ${nfInt0(Math.max(0, it.vol - usedVolLain))} ${it.r.Satuan || "unit"}.`);
+                                            await notify({ title: "Volume melebihi sisa", description: `Sisa volume RAB: ${nfInt0(Math.max(0, it.vol - usedVolLain))} ${it.r.Satuan || "unit"}.` });
                                             return;
                                           }
                                           const usedAmtLain = usedLain.reduce((s, y) => s + y.amt, 0);
                                           if (usedAmtLain + amt > it.amt + 1) {
-                                            window.alert(`Jumlah melebihi sisa anggaran RAB. Sisa: ${rp(Math.max(0, it.amt - usedAmtLain))}.`);
+                                            await notify({ title: "Jumlah melebihi sisa", description: `Sisa anggaran RAB: ${rp(Math.max(0, it.amt - usedAmtLain))}.` });
                                             return;
                                           }
                                         }
                                         await idbPut("entries", { ...x, vol, amt, bln: editBln === "" ? null : Number(editBln) });
+                                        toast.success("Rencana diperbarui.");
                                         setEditId(null);
                                         await onChanged();
                                       }}>✓</Button>
@@ -695,7 +783,7 @@ function RpdPlanTable({
                                   ) : (
                                     <>
                                       <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit" onClick={() => { setEditId(x.id); setEditVol(String(x.vol)); setEditBln(x.bln === null ? "" : String(x.bln)); setEditAmt(String(x.amt)); }}><Pencil className="size-3.5" /></Button>
-                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Hapus" onClick={async () => { await idbDel("entries", x.id); await onChanged(); }}><Trash2 className="size-3.5" /></Button>
+                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Hapus" onClick={async () => { await idbDel("entries", x.id); await onChanged(); toast.success("Rencana dihapus."); }}><Trash2 className="size-3.5" /></Button>
                                     </>
                                   )}
                                 </td>
@@ -746,7 +834,7 @@ function blankDoc(scope: string, flat: RabFlatRow[], tables: SmdTables | null): 
   const ident = villageIdentity(tables, flat[0] ? String(flat[0].Tahun) : "");
   return {
     id: newId("d"), scope, name: "RPD baru", judul: "RENCANA PENGGUNAAN DANA", desa: ident.desa, kecamatan: ident.kecamatan,
-    tahun: ident.tahun, kades: ident.kades, kaur: ident.kaur,
+    tahun: ident.tahun, kades: ident.kades, kaur: ident.kaur, status: "draft",
     tanggal: new Date().toISOString().slice(0, 10), ts: Date.now(), updated: Date.now(),
   };
 }
@@ -776,6 +864,13 @@ function RpdDocForm({ initial, onSave }: { initial: RpdDoc; onSave: (d: RpdDoc) 
     >
       <label className="block text-xs">Nama dokumen<Input className="mt-1" value={d.name} onChange={(e) => set("name", e.target.value)} /></label>
       <label className="block text-xs">Judul<Input className="mt-1" value={d.judul} onChange={(e) => set("judul", e.target.value)} /></label>
+      <label className="block text-xs">Status
+        <select className="mt-1 h-9 w-full rounded-md border border-input bg-card px-2 text-sm" value={d.status ?? "draft"} onChange={(e) => set("status", e.target.value as DocStatus)}>
+          <option value="draft">Draf</option>
+          <option value="progress">Berjalan</option>
+          <option value="done">Selesai</option>
+        </select>
+      </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="block text-xs">Desa<Input className="mt-1" value={d.desa} onChange={(e) => set("desa", e.target.value)} /></label>
         <label className="block text-xs">Kecamatan<Input className="mt-1" value={d.kecamatan} onChange={(e) => set("kecamatan", e.target.value)} /></label>

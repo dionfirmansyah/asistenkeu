@@ -4,6 +4,7 @@ import { useFiltersStore, applyFilters } from "@/stores/filters-store";
 import { rp, rpS } from "@/lib/engine/format";
 import { groupBy } from "@/lib/engine/util";
 import { toCSV, download, copyText } from "@/lib/csv";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export default function StrukturView() {
     return r;
   }, [flat, values, q, search]);
   const [copied, setCopied] = useState(false);
+  const searching = search.trim() !== "";
 
   const byJenis = useMemo(() => {
     const m = groupBy(rows, (r) => r.Jenis || "LAINNYA");
@@ -49,6 +51,7 @@ export default function StrukturView() {
   const exportCsv = () => {
     const base = (fileName ?? "rab").replace(/\.[^.]+$/, "");
     download(`${base}_rab_flat.csv`, toCSV(FLAT_MIN, rows));
+    toast.success("Berkas CSV terunduh.");
   };
 
   return (
@@ -69,7 +72,7 @@ export default function StrukturView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Button size="sm" variant="outline" onClick={async () => { setCopied(await copyText(toCSV(FLAT_MIN, rows))); setTimeout(() => setCopied(false), 1400); }}>
+          <Button size="sm" variant="outline" onClick={async () => { const ok = await copyText(toCSV(FLAT_MIN, rows)); setCopied(ok); setTimeout(() => setCopied(false), 1400); if (ok) toast.success("CSV disalin ke clipboard."); else toast.error("Gagal menyalin.", { duration: Infinity }); }}>
             {copied ? "Tersalin" : "Salin CSV"}
           </Button>
           <Button size="sm" variant="outline" onClick={exportCsv}>Unduh CSV</Button>
@@ -77,24 +80,24 @@ export default function StrukturView() {
       </div>
 
       {byJenis.map(([jenis, jrows]) => (
-        <Node key={jenis} title={jenis} amt={sum(jrows, (r) => Number(r[basis]) || 0)}>
+        <Node key={jenis} title={jenis} amt={sum(jrows, (r) => Number(r[basis]) || 0)} forceOpen={searching}>
           {jenis === "BELANJA" ? (
             // BELANJA: Bidang → Sub Bidang → Kegiatan → Rincian → item
             [...groupBy(jrows.filter((r) => !r.Pseudo), (r) => `${r.Kd_Bid}|${r.Nama_Bidang}`)].sort(sortKey).map(([bk, br]) => {
               const [bc, bn] = bk.split("|");
               return (
-                <Node key={bk} title={`${bc} — ${bn}`} amt={sum(br, (r) => Number(r[basis]) || 0)}>
+                <Node key={bk} title={`${bc} — ${bn}`} amt={sum(br, (r) => Number(r[basis]) || 0)} forceOpen={searching}>
                   {[...groupBy(br, (r) => `${r.Kd_Sub}|${r.Nama_SubBidang}`)].sort(sortKey).map(([sk, sr]) => {
                     const [sc, sn] = sk.split("|");
                     return (
-                      <Node key={sk} title={`${sc} — ${sn}`} amt={sum(sr, (r) => Number(r[basis]) || 0)}>
+                      <Node key={sk} title={`${sc} — ${sn}`} amt={sum(sr, (r) => Number(r[basis]) || 0)} forceOpen={searching}>
                         {[...groupBy(sr, (r) => r.Kd_Keg)].sort(sortKey).map(([kk, kr]) => (
-                          <Node key={kk} title={`${kr[0].ID_Keg || kk} — ${kr[0].Nama_Kegiatan}`} amt={sum(kr, (r) => Number(r[basis]) || 0)}>
+                          <Node key={kk} title={`${kr[0].ID_Keg || kk} — ${kr[0].Nama_Kegiatan}`} amt={sum(kr, (r) => Number(r[basis]) || 0)} forceOpen={searching}>
                             {[...groupBy(kr, (r) => `${r.Kd_SubRinci}|${r.Nama_Rincian}`)].sort(sortKey).map(([rk, rr]) => {
                               const [rc, rn] = rk.split("|");
                               return (
-                                <Node key={rk} title={`${rc} — ${rn}`} amt={sum(rr, (r) => Number(r[basis]) || 0)}>
-                                  {rr.map((r) => <ItemRow key={r._id} r={r} basis={basis} />)}
+                                <Node key={rk} title={`${rc} — ${rn}`} amt={sum(rr, (r) => Number(r[basis]) || 0)} forceOpen={searching}>
+                                  {rr.map((r) => <ItemRow key={r._id} r={r} basis={basis} forceOpen={searching} />)}
                                 </Node>
                               );
                             })}
@@ -108,7 +111,7 @@ export default function StrukturView() {
             })
           ) : (
             // PENDAPATAN / PEMBIAYAAN: sedikit baris, tampilkan langsung tanpa level grup
-            jrows.map((r) => <ItemRow key={r._id} r={r} basis={basis} />)
+            jrows.map((r) => <ItemRow key={r._id} r={r} basis={basis} forceOpen={searching} />)
           )}
         </Node>
       ))}
@@ -118,9 +121,9 @@ export default function StrukturView() {
   );
 }
 
-function Node({ title, amt, children }: { title: string; amt: number; children?: ReactNode }) {
+function Node({ title, amt, children, forceOpen }: { title: string; amt: number; children?: ReactNode; forceOpen?: boolean }) {
   return (
-    <details className="rounded-md border bg-card">
+    <details open={forceOpen} className="rounded-md border bg-card">
       <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm">
         <span className="font-medium">{title}</span>
         <span className="font-semibold">{rp(amt)}</span>
@@ -130,9 +133,9 @@ function Node({ title, amt, children }: { title: string; amt: number; children?:
   );
 }
 
-function ItemRow({ r, basis }: { r: RabFlatRow; basis: Basis }) {
+function ItemRow({ r, basis, forceOpen }: { r: RabFlatRow; basis: Basis; forceOpen?: boolean }) {
   return (
-    <details className="rounded-md border border-dashed">
+    <details open={forceOpen} className="rounded-md border border-dashed">
       <summary className="flex cursor-pointer items-center justify-between px-3 py-1.5 text-xs">
         <span>
           {r.Pseudo ? (

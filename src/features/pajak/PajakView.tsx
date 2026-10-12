@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { rp } from "@/lib/engine/format";
+import { rp, tgl } from "@/lib/engine/format";
+import {
+  buildSimulasiPrintDoc, deleteSimulasi, loadSimulasiList, newSimId, saveSimulasi,
+  type SimulasiRec,
+} from "./simulasi";
+import { Printer, Trash2 } from "lucide-react";
+import { useConfirm } from "@/hooks/use-confirm";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -158,9 +165,41 @@ export default function PajakView() {
   const pot = lines.reduce((a, l) => a + l.amt, 0);
   const potBulat = lines.reduce((a, l) => a + roundUp100(l.amt), 0);
   const kat = KATEGORI[s.kat];
+  const [saved, setSaved] = useState<SimulasiRec[]>(() => loadSimulasiList());
+  const { confirmNode, confirm, notify } = useConfirm();
+
+  const recNow = (): SimulasiRec | null =>
+    !nilai
+      ? null
+      : {
+          id: newSimId(), ts: Date.now(), uraian: s.uraian, kat: s.kat, katLabel: kat.label,
+          nilai, npwp: kat.npwp ? s.npwp : "-", ppnBasis: s.ppnBasis,
+          rates: { ...s.rates }, lines: lines.map((l) => ({ ...l })), pot, potBulat,
+        };
+
+  const simpanSimulasi = () => {
+    const rec = recNow();
+    if (!rec) return;
+    setSaved(saveSimulasi(rec));
+    toast.success("Simulasi disimpan.");
+  };
+
+  const cetakSimulasi = async (rec: SimulasiRec | null) => {
+    if (!rec) return;
+    const win = window.open("", "_blank");
+    if (!win) { await notify({ title: "Popup diblokir", description: "Izinkan popup untuk situs ini agar dokumen bisa dicetak." }); return; }
+    win.document.write(buildSimulasiPrintDoc(rec));
+    win.document.close();
+  };
+
+  const muatSimulasi = (rec: SimulasiRec) => {
+    setS({ kat: rec.kat in KATEGORI ? rec.kat : "barang", npwp: rec.npwp, nilai: rec.nilai ? String(rec.nilai) : "", uraian: rec.uraian, ppnBasis: rec.ppnBasis, rates: { ...RATES_DEFAULT, ...rec.rates } });
+    toast.success(`Simulasi "${rec.uraian || "tanpa uraian"}" dimuat ke kalkulator.`);
+  };
 
   return (
     <div className="space-y-4">
+      {confirmNode}
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-primary">Kalkulator pajak</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Simulasi potongan pajak belanja desa sesuai tarif terbaru.</p>
@@ -288,11 +327,69 @@ export default function PajakView() {
                   <div className="text-xs text-muted-foreground">Selisih pembulatan: {rp(potBulat - pot)}</div>
                 </div>
               )}
+              <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                <Button size="sm" onClick={simpanSimulasi}>Simpan simulasi</Button>
+                <Button size="sm" variant="outline" onClick={() => cetakSimulasi(recNow())}>
+                  <Printer className="size-3.5" /> Cetak
+                </Button>
+
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
       </div>
+
+      <Card>
+        <CardHeader className="p-4 pb-1 md:p-5 md:pb-1"><CardTitle>Simulasi tersimpan ({saved.length})</CardTitle></CardHeader>
+        <CardContent className="p-4 md:p-5">
+          {!saved.length && (
+            <p className="text-sm text-muted-foreground">Belum ada simulasi tersimpan. Simulasi yang disimpan bisa dibuka lagi, dimuat ke kalkulator, atau dicetak.</p>
+          )}
+          {!!saved.length && (
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="bg-muted text-left">
+                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Tanggal</th>
+                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Uraian</th>
+                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kategori</th>
+                    <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
+                    <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Potongan</th>
+                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saved.map((x) => (
+                    <tr key={x.id} className="border-t hover:bg-primary/5">
+                      <td className="h-11 whitespace-nowrap px-3 text-xs">{tgl(new Date(x.ts))} {String(new Date(x.ts).getHours()).padStart(2, "0")}:{String(new Date(x.ts).getMinutes()).padStart(2, "0")}</td>
+                      <td className="h-11 max-w-64 truncate px-3" title={x.uraian}>{x.uraian || "-"}</td>
+                      <td className="h-11 px-3">{x.katLabel}</td>
+                      <td className="num h-11 px-3">{rp(x.nilai)}</td>
+                      <td className="num h-11 px-3">{rp(x.pot)}</td>
+                      <td className="h-11 px-3">
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" title="Cetak simulasi" onClick={() => cetakSimulasi(x)}>
+                            <Printer className="size-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" title="Muat ke kalkulator" onClick={() => muatSimulasi(x)}>Muat</Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-destructive" title="Hapus simulasi" aria-label="Hapus simulasi" onClick={async () => {
+                            if (!(await confirm({ title: "Hapus simulasi tersimpan?", tone: "destructive", confirmLabel: "Hapus" }))) return;
+                            setSaved(deleteSimulasi(x.id));
+                            toast.success("Simulasi dihapus.");
+                          }}>
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="p-3 pb-1">

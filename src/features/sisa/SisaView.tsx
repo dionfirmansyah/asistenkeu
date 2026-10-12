@@ -3,6 +3,7 @@ import { useSmdStore } from "@/stores/smd-store";
 import { idbAll, peekCache, rememberCache, type RpdEntry } from "@/lib/storage/idb";
 import { nfInt0, rp } from "@/lib/engine/format";
 import { toCSV, download } from "@/lib/csv";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DanaBadge } from "@/components/ui/dana-badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -104,6 +105,7 @@ export default function SisaView() {
       status: x.status === "none" ? "Belum direncanakan" : x.status === "partial" ? "Sebagian" : "Selesai",
     }));
     download("sisa_anggaran.csv", toCSV(cols, data));
+    toast.success("Berkas CSV terunduh.");
   };
 
   const jenisOpts = [...new Set(rows.map((x) => x.jenis))].sort();

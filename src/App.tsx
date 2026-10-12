@@ -5,6 +5,7 @@ import { villageIdentity } from "@/lib/engine/identity";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, FileText, Landmark, Moon, Sun, Upload, User } from "lucide-react"
 import NavShell, { SECTIONS } from "@/components/layout/NavShell";
+import { Toaster } from "@/components/ui/sonner";
 
 const initialsOf = (nama: string): string =>
   nama
@@ -164,6 +165,7 @@ export default function App() {
           <NavShell />
         )}
       </main>
+      <Toaster theme={theme} />
     </div>
   );
 }

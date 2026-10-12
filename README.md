@@ -50,16 +50,29 @@ memakai localStorage.
 
 Browser tidak bisa menulis database Jet/Access, jadi tombol
 **Ekspor Register SPP (.smd)** mengirim file + edit ke server lokal kecil
-(`tools/spp_server.mjs` di proyek lama, hanya `http://127.0.0.1:8743`, data tidak
+(`tools/spp_server.mjs`, hanya `http://127.0.0.1:8743`, data tidak
 keluar dari komputer) yang menerapkan patch via ODBC lalu mengembalikan `.smd`
-hasil untuk diunduh.
+hasil untuk diunduh. Cukup **sekali klik** di website — asal servernya jalan.
+
+**Menjalankan server (pilih salah satu, cukup sekali):**
+
+- Klik 2x `tools\jalankan_server_spp.bat`, biarkan jendelanya terbuka
+  selama memakai tombol Ekspor, atau
+- Klik 2x `tools\pasang_autostart.bat` (sekali saja) agar server otomatis
+  jalan setiap Windows dinyalakan — setelah itu ekspor selalu sekali klik.
 
 ```bash
-cd F:\code\ASISTENKEU
 npm install          # sekali saja (paket odbc + mdb-reader)
-npm run patch_server # atau klik 2x tools/jalankan_server_spp.bat
+npm run patch_server # sama dengan .bat di atas, lewat terminal
 ```
 
-Bila server mati, tombol otomatis memakai jalur cadangan: tulis `.edit.json` ke
-folder `export/json` (untuk `tools/terapkan_spp.bat`). Butuh Windows + Microsoft
-Access Database Engine Redistributable (bitness sama dengan Node).
+Status server terlihat di halaman Register SPP ("server lokal aktif" /
+"server lokal mati - pakai mode JSON").
+
+Bila server mati, tombol otomatis memakai jalur cadangan: tulis `.edit.json`
+(untuk `node tools/spp_patch.mjs --smd … --edits …`, lihat
+`node tools/spp_patch.mjs --help`). Butuh Windows + Microsoft
+Access Database Engine Redistributable 64-bit (sama dengan Node x64).
+Tanpa itu, baik server maupun CLI tidak bisa menulis .SMD — karena file .SMD
+adalah database Jet/Access yang hanya bisa ditulis lewat driver ODBC resmi
+Microsoft (pustaka baca seperti mdb-reader tidak bisa menulis).

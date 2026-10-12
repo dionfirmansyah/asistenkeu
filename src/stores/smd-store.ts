@@ -5,6 +5,7 @@ import { idb, idbPut } from "@/lib/storage/idb";
 import { buildRabFlat } from "@/lib/engine/rab";
 import { decodeSmd, hasJetMagic } from "@/lib/engine/decode";
 import { validate } from "@/lib/engine/validate";
+import { toast } from "sonner";
 import type { RabFlatRow, RabIssues, SmdTables, ValidationIssue } from "@/types/smd";
 
 export type Basis = "Anggaran" | "AnggaranStlhPAK" | "AnggaranPAK";
@@ -38,6 +39,7 @@ export const useSmdStore = create<SmdState>((set) => ({
       const decoded = decodeSmd(buf);
       if (!hasJetMagic(decoded)) {
         set({ status: { kind: "error", text: "File tidak dikenali sebagai .SMD Siskeudes." } });
+        toast.error("File tidak dikenali sebagai .SMD Siskeudes.", { duration: Infinity });
         return;
       }
       const reader = new MdbReader(Buffer.from(decoded));
@@ -61,6 +63,7 @@ export const useSmdStore = create<SmdState>((set) => ({
         val,
         status: { kind: "ok", text: `Berhasil: ${flat.length} baris RAB terbaca.` },
       });
+      toast.success(`File ${file.name} dimuat — ${flat.length} baris RAB terbaca.`);
       // Simpan ke IndexedDB agar tetap ada setelah refresh (store "sourceFiles")
       try {
         await idbPut("sourceFiles", { type: "rab", name: file.name, size: file.size, tables, flat, issues, val, savedAt: Date.now() });
@@ -68,7 +71,9 @@ export const useSmdStore = create<SmdState>((set) => ({
         console.error("Gagal menyimpan file ke IndexedDB", e);
       }
     } catch (e) {
-      set({ status: { kind: "error", text: e instanceof Error ? e.message : "Gagal membaca file." } });
+      const msg = e instanceof Error ? e.message : "Gagal membaca file.";
+      set({ status: { kind: "error", text: msg } });
+      toast.error(msg, { duration: Infinity });
     }
   },
   setBasis: (basis) => set({ basis }),

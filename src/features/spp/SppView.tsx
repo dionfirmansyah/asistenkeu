@@ -7,6 +7,8 @@ import { rp, tgl } from "@/lib/engine/format";
 import { download } from "@/lib/csv";
 import { downloadBase64, patchSpp, serverStatus } from "@/lib/sppServer";
 import { writeJsonToFolder } from "@/lib/storage/fsdir";
+import { toast } from "sonner";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Button } from "@/components/ui/button";
 import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,7 @@ const linkOf = (v: unknown) => {
 
 export default function SppView() {
   const { flat, tables } = useSmdStore();
+  const { confirmNode, confirm } = useConfirm();
   const [spp, setSpp] = useState<SppRec | null>(() => peekCache<SppRec>("src:spp") ?? null);
   const [edits, setEdits] = useState<Map<string, { id: string; table: string; keys: Record<string, string>; fields: Record<string, { orig: unknown; edit: unknown }>; updatedAt: string }>>(() => peekCache("edits:all") ?? new Map());
   const [dana, setDana] = useState("");
@@ -68,8 +71,11 @@ export default function SppView() {
       const rec = await readSppFile(file);
       setSpp(rec);
       setMsg(`${file.name}: ${rec.reg.length.toLocaleString("id-ID")} SPP, ${rec.bukti.length.toLocaleString("id-ID")} kwitansi.`);
+      toast.success(`File SPP dimuat — ${rec.reg.length} SPP, ${rec.bukti.length} kwitansi.`);
     } catch (e) {
-      setMsg("Gagal membaca file SPP: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal membaca file SPP: " + (e instanceof Error ? e.message : String(e));
+      setMsg(msg);
+      toast.error(msg, { duration: Infinity });
     }
   };
 
@@ -119,8 +125,8 @@ export default function SppView() {
     });
   }, [spp, edits]);
 
-  const danaOpts = useMemo(() => [...new Set((spp?.bukti ?? []).map((b) => vt(b.Sumberdana).trim()).filter(Boolean))].sort(), [spp]);
-  const penerimaOpts = useMemo(() => [...new Set((spp?.bukti ?? []).map((b) => vt(b.Nm_Penerima).trim()).filter(Boolean))].sort(), [spp]);
+  const danaOpts = useMemo(() => [...new Set(appliedBukti.map((b) => vt(b.Sumberdana).trim()).filter(Boolean))].sort(), [appliedBukti]);
+  const penerimaOpts = useMemo(() => [...new Set(appliedBukti.map((b) => vt(b.Nm_Penerima).trim()).filter(Boolean))].sort(), [appliedBukti]);
   const kegOpts = useMemo(() => {
     const nameByKd = new Map<string, string>();
     for (const r of flat) if (!r.Pseudo && !nameByKd.has(r.Kd_Keg)) nameByKd.set(r.Kd_Keg, r.Nama_Kegiatan || r.Kd_Keg);
@@ -152,7 +158,7 @@ export default function SppView() {
       return true;
     });
     return rows;
-  }, [spp, buktiBySpp, dana, penerima, kegFilter, triwulan, search]);
+  }, [spp, appliedReg, buktiBySpp, dana, penerima, kegFilter, triwulan, search]);
 
   const totalJumlah = list.reduce((s, r) => s + Number(r.Jumlah) || 0, 0);
   const kdDesa = flat[0]?.Kd_Desa;
@@ -161,21 +167,32 @@ export default function SppView() {
   const totalPajak = useMemo(() => (spp?.pot ?? []).reduce((s, p) => s + (Number(p.Nilai) || 0), 0), [spp]);
   const nominalPerDana = useMemo(() => {
     const m = new Map<string, number>();
-    for (const b of spp?.bukti ?? []) {
+    for (const b of appliedBukti) {
       const k = vt(b.Sumberdana).trim() || "(tanpa sumber dana)";
       m.set(k, (m.get(k) ?? 0) + (Number(b.Nilai) || 0));
     }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
-  }, [spp]);
+  }, [appliedBukti]);
 
   const saveEdit = async (table: string, keys: Record<string, string>, fields: Record<string, { orig: unknown; edit: unknown }>) => {
     const id = table === "Ta_SPP" ? `spp:${keys.No_SPP}` : `bukti:${keys.No_SPP}¦${keys.No_Bukti}`;
-    const rec = { id, table, keys, fields, updatedAt: new Date().toISOString() };
     const db = await idb();
+    const m = new Map(edits);
+    if (!Object.keys(fields).length) {
+      await db.delete("sppEdits", id);
+      m.delete(id);
+      rememberCache("edits:all", m);
+      setEdits(m);
+      toast.success("Edit dihapus — kembali ke data .SMD.");
+      setEditCtx(null);
+      return;
+    }
+    const rec = { id, table, keys, fields, updatedAt: new Date().toISOString() };
     await db.put("sppEdits", rec);
-    const m = new Map(edits).set(id, rec);
+    m.set(id, rec);
     rememberCache("edits:all", m);
     setEdits(m);
+    toast.success("Edit disimpan.");
     setEditCtx(null);
   };
 
@@ -244,10 +261,13 @@ export default function SppView() {
     });
     if (!editsArr.length && !inserts.length) {
       setMsg("Tidak ada edit yang tersimpan.");
+      toast.info("Tidak ada edit yang tersimpan.");
       return;
     }
     if (!spp.raw) {
-      setMsg("File asli tidak tersimpan di browser (data lama). Pilih ulang file SPP .SMD, lalu ekspor lagi.");
+      const msg = "File asli tidak tersimpan di browser (data lama). Pilih ulang file SPP .SMD, lalu ekspor lagi.";
+      setMsg(msg);
+      toast.warning(msg);
       return;
     }
     setPatchBusy(true);
@@ -262,7 +282,9 @@ export default function SppView() {
       });
       if (!r.ok) {
         if (/password/i.test(r.error || "")) setNeedPassword(true);
-        setMsg("Gagal: " + (r.error || "server mengembalikan error."));
+        const msg = "Gagal: " + (r.error || "server mengembalikan error.");
+        setMsg(msg);
+        toast.error(msg, { duration: Infinity });
         return;
       }
       setNeedPassword(false);
@@ -270,8 +292,11 @@ export default function SppView() {
       const peringatan = (r.mismatches || []).length ? ` PERINGATAN: ${(r.mismatches || []).join("; ")}` : "";
       const insInfo = typeof r.inserted === "number" && r.inserted ? ` + ${r.inserted} baris pajak baru` : "";
       setMsg(`Selesai: ${r.applied}/${editsArr.length} diterapkan${insInfo}, ${r.verified} terverifikasi. File ${r.outName} terunduh - impor ke Siskeudes.${peringatan}`);
+      toast.success("Ekspor selesai — berkas .smd terunduh.");
     } catch (e) {
-      setMsg("Gagal menghubungi server: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal menghubungi server: " + (e instanceof Error ? e.message : String(e));
+      setMsg(msg);
+      toast.error(msg, { duration: Infinity });
       setSrvOnline(false);
     } finally {
       setPatchBusy(false);
@@ -284,6 +309,7 @@ export default function SppView() {
     const editsArr = buildToolEdits();
     if (!editsArr.length) {
       setMsg("Tidak ada edit yang tersimpan.");
+      toast.info("Tidak ada edit yang tersimpan.");
       return;
     }
     const payload = { tool: "asistenkeu-spp-patch", version: 1, sourceFile: spp.name, exportedAt: new Date().toISOString(), edits: editsArr };
@@ -292,14 +318,17 @@ export default function SppView() {
     const keFolder = await writeJsonToFolder(nama, json);
     if (keFolder.ok) {
       setMsg(`Tersimpan di folder "${keFolder.dir || "export/json"}" (${editsArr.length} baris). Klik 2× tools/terapkan_spp.bat → hasil di export/smd/.`);
+      toast.success(`Tersimpan di folder "${keFolder.dir || "export/json"}".`);
     } else {
       download(nama, json, "application/json;charset=utf-8");
       setMsg(`Diunduh (${editsArr.length} baris). Pindahkan ke folder export/json proyek lama, lalu klik 2× tools/terapkan_spp.bat.`);
+      toast.success("Berkas JSON terunduh.");
     }
   };
 
   return (
     <div className="space-y-4">
+      {confirmNode}
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-primary">Register SPP</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Surat permintaan pembayaran dan kwitansi dari file SPP Siskeudes.</p>
@@ -333,7 +362,7 @@ export default function SppView() {
               <Input className="h-7 w-40 text-xs" type="password" value={smdPassword} onChange={(e) => setSmdPassword(e.target.value)} placeholder="opsional" />
             </label>
           )}
-          {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!window.confirm("Hapus semua edit lokal?")) return; const db = await idb(); await db.clear("sppEdits"); bustCache("edits:all"); setEdits(new Map()); }}>Hapus semua edit</Button>}
+          {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!(await confirm({ title: "Hapus semua edit lokal?", description: "Perubahan yang belum diekspor ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return; const db = await idb(); await db.clear("sppEdits"); bustCache("edits:all"); setEdits(new Map()); toast.success("Semua edit lokal dihapus."); }}>Hapus semua edit</Button>}
           {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
         </CardContent>
       </Card>
@@ -486,7 +515,8 @@ export default function SppView() {
           {editCtx && spp && (
             <SppEditForm
               ctx={editCtx}
-              row={editCtx.table === "Ta_SPP" ? spp.reg.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP) ?? null : spp.bukti.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP && vt(r.No_Bukti) === editCtx.keys.No_Bukti) ?? null}
+              row={editCtx.table === "Ta_SPP" ? appliedReg.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP) ?? null : appliedBukti.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP && vt(r.No_Bukti) === editCtx.keys.No_Bukti) ?? null}
+              base={editCtx.table === "Ta_SPP" ? spp.reg.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP) ?? null : spp.bukti.find((r) => vt(r.No_SPP) === editCtx.keys.No_SPP && vt(r.No_Bukti) === editCtx.keys.No_Bukti) ?? null}
               onSave={(fields) => saveEdit(editCtx.table, editCtx.keys, fields)}
             />
           )}
@@ -533,11 +563,12 @@ export default function SppView() {
   );
 }
 
-function SppEditForm({ ctx, row, onSave }: { ctx: { table: string; keys: Record<string, string> }; row: Row | null; onSave: (fields: Record<string, { orig: unknown; edit: unknown }>) => void }) {
+function SppEditForm({ ctx, row, base, onSave }: { ctx: { table: string; keys: Record<string, string> }; row: Row | null; base: Row | null; onSave: (fields: Record<string, { orig: unknown; edit: unknown }>) => void }) {
   const fields = ctx.table === "Ta_SPP" ? ["Keterangan", "Jumlah"] : ["Nm_Penerima", "Keterangan", "Tgl_Bukti", "Nilai", "Sumberdana", "link_bukti"];
-  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((f) => [f, row ? vt(row[f]) : ""])));
+  const shown = row ?? base;
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((f) => [f, shown ? vt(shown[f]) : ""])));
   return (
-    <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); const out: Record<string, { orig: unknown; edit: unknown }> = {}; for (const f of fields) { if (vt(row?.[f]) !== vals[f]) out[f] = { orig: row?.[f], edit: f === "Nilai" || f === "Jumlah" ? Number(vals[f]) || 0 : vals[f] }; } onSave(out); }}>
+    <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); const out: Record<string, { orig: unknown; edit: unknown }> = {}; for (const f of fields) { if (vals[f] !== vt(base?.[f])) out[f] = { orig: base?.[f], edit: f === "Nilai" || f === "Jumlah" ? Number(vals[f]) || 0 : vals[f] }; } onSave(out); }}>
       {fields.map((f) => (
         <label key={f} className="block text-xs">{f}
           <Input className="mt-1" value={vals[f]} onChange={(e) => setVals({ ...vals, [f]: e.target.value })} />

@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { MoneyInput } from "@/components/ui/money-input";
 import { ComboboxField } from "@/components/ui/combobox";
 import type { Row } from "@/types/smd";
+import { useConfirm } from "@/hooks/use-confirm";
+import { toast } from "sonner";
 
 const SAMPLE_PATH = "dataset/PAJAK_DESA_20261010.smd";
 const SAMPLE_NAME = "PAJAK_DESA_20261010.smd";
@@ -66,6 +68,7 @@ export default function RekapPajakView() {
   const [formOpen, setFormOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [loadingSample, setLoadingSample] = useState(false);
+  const { confirmNode, confirm } = useConfirm();
 
   const reload = async () => {
     const db = await idb();
@@ -87,6 +90,7 @@ export default function RekapPajakView() {
     rememberCache(`manual:${pf.name}`, ms);
     setManual(ms);
     setMsg(`${pf.name}: ${pf.pajak.length.toLocaleString("id-ID")} SSP pajak.`);
+    toast.success(`File pajak dimuat — ${pf.pajak.length} SSP.`);
   };
 
   const processFile = async (f: File) => {
@@ -95,7 +99,9 @@ export default function RekapPajakView() {
       const pf = parsePajakBuffer(new Uint8Array(await f.arrayBuffer()), f.name);
       await saveFile(pf);
     } catch (e) {
-      setMsg("Gagal membaca file pajak: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal membaca file pajak: " + (e instanceof Error ? e.message : String(e));
+      setMsg(msg);
+      toast.error(msg, { duration: Infinity });
     }
   };
 
@@ -108,7 +114,9 @@ export default function RekapPajakView() {
       const pf = parsePajakBuffer(new Uint8Array(await res.arrayBuffer()), SAMPLE_NAME);
       await saveFile(pf);
     } catch (e) {
-      setMsg("Gagal memuat contoh: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal memuat contoh: " + (e instanceof Error ? e.message : String(e));
+      setMsg(msg);
+      toast.error(msg, { duration: Infinity });
     } finally {
       setLoadingSample(false);
     }
@@ -181,10 +189,12 @@ export default function RekapPajakView() {
       [x.noSsp, tgl(x.tgl), cell(x.keterangan), cell(x.jenis), x.nilai, x.ntpn, cell(x.noBukti)].join(","),
     );
     download("rekap_pajak.csv", "﻿" + [head, ...lines].join("\r\n"), "text/csv;charset=utf-8");
+    toast.success("Berkas CSV terunduh.");
   };
 
   return (
     <div className="space-y-4">
+      {confirmNode}
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-primary">Rekap pajak</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Setoran pajak (SSP) dari file pajak Siskeudes.</p>
@@ -288,9 +298,10 @@ export default function RekapPajakView() {
                         {x.manual && (
                           <div>
                             <Button size="sm" variant="ghost" className="h-6 px-1 text-xs text-destructive" onClick={async () => {
-                              if (!x.manualId || !window.confirm("Hapus data pajak manual ini?")) return;
+                              if (!x.manualId || !(await confirm({ title: "Hapus data pajak manual ini?", tone: "destructive", confirmLabel: "Hapus" }))) return;
                               await idbDel("pajakManual", x.manualId);
                               await reload();
+                              toast.success("Data pajak manual dihapus.");
                             }}>Hapus</Button>
                           </div>
                         )}
@@ -318,7 +329,7 @@ export default function RekapPajakView() {
                 rinciList={file.rinci}
                 jenisOpts={jenisOpts}
                 fileName={file.name}
-                onSaved={async () => { setFormOpen(false); await reload(); }}
+                onSaved={async () => { setFormOpen(false); await reload(); toast.success("Data pajak manual disimpan."); }}
               />
             </DialogContent>
           </Dialog>

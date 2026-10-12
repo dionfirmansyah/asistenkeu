@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSmdStore } from "@/stores/smd-store";
 import { toCSV, download, copyText } from "@/lib/csv";
+import { toast } from "sonner";
 import { vt } from "@/lib/engine/util";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -49,8 +50,8 @@ export default function RawView() {
         <Input className="h-8 w-64 text-xs" placeholder="Cari di tabel…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
         <span className="text-xs text-muted-foreground">{filtered.length.toLocaleString("id-ID")} dari {rows.length.toLocaleString("id-ID")} baris · {cols.length} kolom</span>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={async () => { setCopied(await copyText(toCSV(cols.map((c) => [c, c] as [string, string]), filtered))); setTimeout(() => setCopied(false), 1400); }}>{copied ? "Tersalin" : "Salin CSV"}</Button>
-        <Button variant="outline" size="sm" onClick={() => download(`${baseName}_${current}.csv`, toCSV(cols.map((c) => [c, c] as [string, string]), filtered))}>Unduh CSV</Button>
+        <Button variant="outline" size="sm" onClick={async () => { const ok = await copyText(toCSV(cols.map((c) => [c, c] as [string, string]), filtered)); setCopied(ok); setTimeout(() => setCopied(false), 1400); if (ok) toast.success("CSV disalin ke clipboard."); else toast.error("Gagal menyalin.", { duration: Infinity }); }}>{copied ? "Tersalin" : "Salin CSV"}</Button>
+        <Button variant="outline" size="sm" onClick={() => { download(`${baseName}_${current}.csv`, toCSV(cols.map((c) => [c, c] as [string, string]), filtered)); toast.success("Berkas CSV terunduh."); }}>Unduh CSV</Button>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-[13px]">

@@ -17,6 +17,8 @@ export function idb(): Promise<IDBPDatabase> {
   return dbPromise;
 }
 
+export type DocStatus = "draft" | "progress" | "done";
+
 export interface RpdDoc {
   id: string;
   scope: string;
@@ -30,6 +32,8 @@ export interface RpdDoc {
   tanggal: string;
   ts: number;
   updated: number;
+  /** Status kanban; dokumen lama tanpa field ini dianggap "draft". */
+  status?: DocStatus;
 }
 
 export interface RpdEntry {

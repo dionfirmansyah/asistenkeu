@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSmdStore } from "@/stores/smd-store";
 import { idb, peekCache, rememberCache } from "@/lib/storage/idb";
 import { parseSppBuffer, saveSppFile, type SppRec } from "@/lib/sppFile";
+import { toast } from "sonner";
 import { vt } from "@/lib/engine/util";
 import { rp } from "@/lib/engine/format";
 import { Input } from "@/components/ui/input";
@@ -39,8 +40,11 @@ export default function SppDataView() {
       await saveSppFile(rec);
       setSpp(rec);
       setLoading("");
+      toast.success("File contoh dimuat.");
     } catch (e) {
-      setLoading("Gagal memuat contoh: " + (e instanceof Error ? e.message : String(e)));
+      const msg = "Gagal memuat contoh: " + (e instanceof Error ? e.message : String(e));
+      setLoading(msg);
+      toast.error(msg, { duration: Infinity });
     }
   };
 
