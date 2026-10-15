@@ -11,6 +11,7 @@ const RekonView = lazy(() => import("@/features/rekon/RekonView"));
 const RekapPajakView = lazy(() => import("@/features/rekap-pajak/RekapPajakView"));
 const SppDataView = lazy(() => import("@/features/spp-data/SppDataView"));
 const PajakDataView = lazy(() => import("@/features/pajak-data/PajakDataView"));
+const DriveView = lazy(() => import("@/features/drive/DriveView"));
 import { useSmdStore } from "@/stores/smd-store";
 import { idb, peekCache } from "@/lib/storage/idb";
 import { readSppFile } from "@/lib/sppFile";
@@ -20,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
-  ClipboardList, Database, FileText, FolderTree, LayoutDashboard, LayoutGrid, Percent, Receipt, ReceiptText, Scale, ShieldCheck, Table2, Wallet,
+  ClipboardList, Cloud, Database, FileText, FolderTree, LayoutDashboard, LayoutGrid, Percent, Receipt, ReceiptText, Scale, ShieldCheck, Table2, Wallet,
 } from "lucide-react";
 
 export const SECTIONS: Array<{ title: string; items: Array<{ id: string; label: string; icon: typeof LayoutDashboard }> }> = [
@@ -48,6 +49,7 @@ export const SECTIONS: Array<{ title: string; items: Array<{ id: string; label: 
     items: [
       { id: "pajak", label: "Kalkulator pajak", icon: Percent },
       { id: "rekon", label: "Rekonsiliasi kas", icon: Scale },
+      { id: "drive", label: "Data Dukung SPJ", icon: Cloud },
     ],
   },
   {
@@ -230,6 +232,8 @@ export default function NavShell() {
           <RekapPajakView />
         ) : active === "rekon" ? (
           <RekonView />
+        ) : active === "drive" ? (
+          <DriveView />
         ) : (
           <div className="rounded-md border p-4">
             <h2 className="text-lg font-semibold">{SECTIONS.flatMap((s) => s.items).find((i) => i.id === active)?.label}</h2>

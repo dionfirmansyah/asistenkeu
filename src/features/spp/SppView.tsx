@@ -334,36 +334,41 @@ export default function SppView() {
         <p className="mt-0.5 text-sm text-muted-foreground">Surat permintaan pembayaran dan kwitansi dari file SPP Siskeudes.</p>
       </div>
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
-          <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
-            {spp ? "Ganti file SPP .SMD" : "Pilih file SPP .SMD"}
-            <input type="file" accept=".smd,.SMD" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void processFile(f); e.target.value = ""; }} />
-          </label>
-          {spp && <span className="text-xs text-muted-foreground">{spp.name} · {spp.nSpp.toLocaleString("id-ID")} SPP · {spp.bukti.length.toLocaleString("id-ID")} kwitansi</span>}
-          {spp && (
-            srvOnline ? (
-              <Button size="sm" variant="default" disabled={patchBusy} onClick={exportDirect}>
-                {patchBusy ? "Memproses…" : "Ekspor Register SPP (.smd)"}
-              </Button>
-            ) : (
-              <Button size="sm" variant="default" onClick={exportJsonFolder}>Ekspor Register SPP (.smd)</Button>
-            )
-          )}
-          {spp && (
-            <button type="button" className="text-xs text-muted-foreground underline" onClick={refreshServer} title="Cek ulang server lokal">
-              {srvOnline === null ? "cek server…" : srvOnline ? "server lokal aktif" : "server lokal mati - pakai mode JSON"}
-            </button>
-          )}
-          {spp && !!edits.size && (
-            <Button size="sm" variant="outline" onClick={exportJsonFolder}>Ekspor JSON</Button>
-          )}
-          {needPassword && (
-            <label className="flex items-center gap-1 text-xs">Password Jet:
-              <Input className="h-7 w-40 text-xs" type="password" value={smdPassword} onChange={(e) => setSmdPassword(e.target.value)} placeholder="opsional" />
+        <CardContent className="space-y-2 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-accent">
+              {spp ? "Ganti file SPP .SMD" : "Pilih file SPP .SMD"}
+              <input type="file" accept=".smd,.SMD" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void processFile(f); e.target.value = ""; }} />
             </label>
+            {spp && <span className="text-xs text-muted-foreground">{spp.name} · {spp.nSpp.toLocaleString("id-ID")} SPP · {spp.bukti.length.toLocaleString("id-ID")} kwitansi</span>}
+            {spp && (
+              <button type="button" className="text-xs text-muted-foreground underline" onClick={refreshServer} title="Cek ulang server lokal">
+                {srvOnline === null ? "cek server…" : srvOnline ? "server lokal aktif" : "server lokal mati - pakai mode JSON"}
+              </button>
+            )}
+          </div>
+          {spp && (
+            <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
+              <span className="mr-1 text-xs font-medium text-muted-foreground">Ekspor</span>
+              {srvOnline ? (
+                <Button size="sm" variant="default" disabled={patchBusy} onClick={exportDirect}>
+                  {patchBusy ? "Memproses…" : "Ekspor Register SPP (.smd)"}
+                </Button>
+              ) : (
+                <Button size="sm" variant="default" onClick={exportJsonFolder}>Ekspor Register SPP (.smd)</Button>
+              )}
+              {!!edits.size && (
+                <Button size="sm" variant="outline" onClick={exportJsonFolder}>Ekspor JSON</Button>
+              )}
+              {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!(await confirm({ title: "Hapus semua edit lokal?", description: "Perubahan yang belum diekspor ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return; const db = await idb(); await db.clear("sppEdits"); bustCache("edits:all"); setEdits(new Map()); toast.success("Semua edit lokal dihapus."); }}>Hapus semua edit</Button>}
+              {needPassword && (
+                <label className="flex items-center gap-1 text-xs">Password Jet:
+                  <Input className="h-7 w-40 text-xs" type="password" value={smdPassword} onChange={(e) => setSmdPassword(e.target.value)} placeholder="opsional" />
+                </label>
+              )}
+            </div>
           )}
-          {edits.size > 0 && <Button size="sm" variant="outline" onClick={async () => { if (!(await confirm({ title: "Hapus semua edit lokal?", description: "Perubahan yang belum diekspor ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return; const db = await idb(); await db.clear("sppEdits"); bustCache("edits:all"); setEdits(new Map()); toast.success("Semua edit lokal dihapus."); }}>Hapus semua edit</Button>}
-          {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
+          {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
         </CardContent>
       </Card>
 

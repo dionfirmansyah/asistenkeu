@@ -7,6 +7,13 @@ import { buildRpdExcelDoc } from "./excel";
 import { buildRpdJson, parseRpdJson } from "./jsonFile";
 import { Button } from "@/components/ui/button";
 import { DanaBadge } from "@/components/ui/dana-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ComboboxField } from "@/components/ui/combobox";
 import { useConfirm } from "@/hooks/use-confirm";
 import { buildRpdPrintDoc, rekName } from "./print";
-import { ArrowLeft, Eraser, FileDown, FileSpreadsheet, FileUp, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Eraser, FileDown, FileSpreadsheet, FileUp, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -136,7 +143,7 @@ export default function RpdView() {
     const msg = `RPD "${cur.name || cur.judul || "RPD"}" dipindahkan ke ${label}.`;
     if (status === "done") toast.success(msg);
     else if (status === "progress") toast.info(msg);
-    else toast.warning(msg);
+    else toast.info(msg);
   };
 
   const doc = docs.find((d) => d.id === docId) ?? null;
@@ -196,6 +203,22 @@ export default function RpdView() {
     }
     return [...m.values()].sort((a, b) => b.amt - a.amt);
   }, [rows, items]);
+
+  const kosongkan = async () => {
+    if (!entries.length || !(await confirm({ title: `Hapus semua rencana pada ${doc?.name || "RPD aktif"}?`, description: "Seluruh baris rencana ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
+    for (const e of entries) await idbDel("entries", e.id);
+    await reload();
+    toast.success("Semua rencana dihapus.");
+  };
+
+  const hapusDokumen = async () => {
+    if (!doc || !(await confirm({ title: `Hapus RPD "${doc.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
+    for (const e of entries) await idbDel("entries", e.id);
+    await idbDel("docs", doc.id);
+    window.location.hash = "/rpd";
+    await reload();
+    toast.success(`Dokumen RPD "${doc.name}" dihapus.`);
+  };
 
   const exportJson = () => {
     if (!doc) return;
@@ -361,24 +384,29 @@ export default function RpdView() {
             <span className="mr-1 text-xs font-medium text-muted-foreground">Dokumen</span>
             <Button size="sm" variant="outline" onClick={() => setModal("new")}><Plus className="size-3.5" /> Baru</Button>
             <Button size="sm" variant="outline" onClick={() => setModal("edit")} disabled={!doc}><Pencil className="size-3.5" /> Edit</Button>
-            <Button size="sm" variant="outline" disabled={!entries.length} onClick={async () => {
-              if (!entries.length || !(await confirm({ title: `Hapus semua rencana pada ${doc?.name || "RPD aktif"}?`, description: "Seluruh baris rencana ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
-              for (const e of entries) await idbDel("entries", e.id);
-              await reload();
-              toast.success("Semua rencana dihapus.");
-            }}><Eraser className="size-3.5" /> Kosongkan</Button>
-            <Button size="sm" variant="destructive" disabled={!doc} onClick={async () => {
-              if (!doc || !(await confirm({ title: `Hapus RPD "${doc.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
-              for (const e of entries) await idbDel("entries", e.id);
-              await idbDel("docs", doc.id);
-              window.location.hash = "/rpd";
-              await reload();
-              toast.success(`Dokumen RPD "${doc.name}" dihapus.`);
-            }}><Trash2 className="size-3.5" /> Hapus RPD</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button size="sm" variant="outline" aria-label="Aksi berbahaya" title="Aksi berbahaya" />}
+              >
+                Lainnya
+                <ChevronDown className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem disabled={!entries.length} onClick={() => void kosongkan()}>
+                  <Eraser />
+                  Kosongkan
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" disabled={!doc} onClick={() => void hapusDokumen()}>
+                  <Trash2 />
+                  Hapus RPD
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
             <span className="mr-1 text-xs font-medium text-muted-foreground">Ekspor / Impor</span>
-            <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs hover:bg-accent">
+            <label className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-primary bg-transparent px-2.5 text-[0.8rem] font-medium text-primary hover:bg-primary/5">
               <FileUp className="size-3.5" /> Impor JSON
               <input
                 ref={importRef}
@@ -527,7 +555,17 @@ export default function RpdView() {
                   {n ? `${n} item · ${rp(tot)}${bulan === "" ? " · tanpa bulan" : ` · ${BLN[Number(bulan)]}`}` : "Belum ada volume diisi"}
                   {adaLebih && " · ada yang melebihi sisa"}
                 </span>
-                <Button onClick={addAll} disabled={!docId || !keg || !rinc || adaLebih}>Tambahkan ke rencana</Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {keg && (
+                    <Button
+                      variant="outline"
+                      onClick={() => { setKeg(""); setRinc(""); setVols({}); setAmts({}); setSearch(""); }}
+                    >
+                      Batal
+                    </Button>
+                  )}
+                  <Button onClick={addAll} disabled={!docId || !keg || !rinc || adaLebih}>Tambahkan ke rencana</Button>
+                </div>
               </div>
             );
           })()}

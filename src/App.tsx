@@ -165,7 +165,7 @@ export default function App() {
           <NavShell />
         )}
       </main>
-      <Toaster theme={theme} />
+      <Toaster theme={theme} richColors={true}/>
     </div>
   );
 }

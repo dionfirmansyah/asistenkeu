@@ -169,7 +169,7 @@ export default function RekonView() {
         {!state.list.length && (
           <p className="text-sm text-muted-foreground">Belum ada rekonsiliasi. Klik <b>Rekonsiliasi baru</b> untuk membuat.</p>
         )}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 ">
           {state.list.map((x) => {
             let aB = 0, aBr = 0;
             for (const i of x.items) {
@@ -178,13 +178,13 @@ export default function RekonView() {
             }
             const selisih = (Math.round(x.bku) + aB) - (Math.round(x.brankas) + aBr);
             return (
-              <div key={x.id} className="relative rounded-lg border transition hover:bg-accent">
+              <div key={x.id} className="relative rounded-lg border transition hover:bg-accent bg-gray-50 dark:bg-gray-800">
                 <button type="button" onClick={() => { window.location.hash = `/rekon/${x.id}`; }} className="block w-full p-4 text-left">
                   <div className="font-semibold">{x.judul || "Rekonsiliasi"}</div>
                   <div className="mt-1 text-xs text-muted-foreground">Periode {x.periode || "-"} · {x.items.length} item</div>
                   <div className="mt-2">{selisih === 0 ? <StatusBadge tone="success">Sesuai</StatusBadge> : <StatusBadge tone="destructive">Selisih {rp(selisih)}</StatusBadge>}</div>
                 </button>
-                <button type="button" title="Hapus rekonsiliasi" onClick={async (e) => { e.stopPropagation(); if (!(await confirm({ title: `Hapus rekonsiliasi "${x.judul || "ini"}"?`, tone: "destructive", confirmLabel: "Hapus" }))) return; setState({ ...state, list: state.list.filter((y) => y.id !== x.id) }); toast.success("Rekonsiliasi dihapus."); }} className="absolute right-3 top-3 rounded-md border px-2 py-1 text-xs text-destructive hover:bg-destructive/10">Hapus</button>
+                <Button size={'icon'} variant={'destructive'} type="button" title="Hapus rekonsiliasi" onClick={async (e) => { e.stopPropagation(); if (!(await confirm({ title: `Hapus rekonsiliasi "${x.judul || "ini"}"?`, tone: "destructive", confirmLabel: "Hapus" }))) return; setState({ ...state, list: state.list.filter((y) => y.id !== x.id) }); toast.success("Rekonsiliasi dihapus."); }} className="absolute right-3 top-3  px-2 py-1 text-xs "><Trash2/></Button>
               </div>
             );
           })}

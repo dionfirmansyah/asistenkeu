@@ -219,6 +219,24 @@
   }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .tabular, table td, table th { font-variant-numeric: tabular-nums; }
+  /* Semua yang bisa diklik berkursor pointer (keputusan UX).
+     Aturan utilitas (mis. cursor-grab) tetap menang karena layer utilities. */
+  button:not(:disabled),
+  summary,
+  select:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  [role^="menuitem"],
+  [role="option"],
+  [role="switch"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
   input[type='number']::-webkit-outer-spin-button,
   input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
