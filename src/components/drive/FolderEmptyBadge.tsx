@@ -35,7 +35,7 @@ export function FolderEmptyBadge({ folderId }: { folderId: string }) {
   if (state === "only-empty-folders") return <StatusBadge tone="neutral">Berisi folder kosong</StatusBadge>;
   if (state === "loading") {
     return (
-      <span role="status" className="shrink-0 text-[11px] text-muted-foreground">
+      <span role="status" className="shrink-0 text-xs text-muted-foreground">
         Memeriksa…
       </span>
     );

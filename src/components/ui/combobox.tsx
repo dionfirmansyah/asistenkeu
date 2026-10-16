@@ -31,7 +31,7 @@ export function ComboboxField({
       <PopoverTrigger
         role="combobox"
         disabled={disabled}
-        className={cn("inline-flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm font-normal shadow-sm hover:bg-accent/50 disabled:opacity-50", !selected && "text-muted-foreground", className)}
+        className={cn("inline-flex h-11 w-full items-center justify-between rounded-sm border-2 border-input bg-card px-3 py-2 text-sm font-normal shadow-none hover:bg-accent disabled:opacity-50", !selected && "text-muted-foreground", className)}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />

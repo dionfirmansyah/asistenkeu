@@ -33,7 +33,7 @@ export function UploadPanel({ tasks, onCancel, onCancelAll, onClear }: UploadPan
   const running = tasks.some((t) => t.status === "queued" || t.status === "uploading");
 
   return (
-    <section className="rounded-lg border bg-card shadow-sm">
+    <section className="rounded-none border-2 bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <h3 className="text-base font-semibold">Unggahan</h3>
         <div className="flex gap-2">

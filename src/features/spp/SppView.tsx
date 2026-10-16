@@ -330,7 +330,7 @@ export default function SppView() {
     <div className="space-y-4">
       {confirmNode}
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Register SPP</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Register SPP</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Surat permintaan pembayaran dan kwitansi dari file SPP Siskeudes.</p>
       </div>
       <Card>
@@ -378,10 +378,10 @@ export default function SppView() {
         <>
           {/* KPI ringkasan */}
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total nominal SPP</div><div className="truncate text-2xl font-semibold tabular-nums" title={rp(totalJumlah)}>{rp(totalJumlah)}</div><div className="text-xs text-muted-foreground">{list.length} SPP</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total SPP</div><div className="text-2xl font-semibold tabular-nums">{list.length.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">dari {spp.reg.length.toLocaleString("id-ID")} di file</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total kwitansi</div><div className="text-2xl font-semibold tabular-nums">{totalKwitansi.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">SPPBukti</div></CardContent></Card>
-            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total pajak</div><div className="truncate text-2xl font-semibold tabular-nums" title={rp(totalPajak)}>{rp(totalPajak)}</div><div className="text-xs text-muted-foreground">potongan</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total nominal SPP</div><div className="truncate font-mono text-3xl font-medium tabular-nums" title={rp(totalJumlah)}>{rp(totalJumlah)}</div><div className="text-xs text-muted-foreground">{list.length} SPP</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total SPP</div><div className="font-mono text-3xl font-medium tabular-nums">{list.length.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">dari {spp.reg.length.toLocaleString("id-ID")} di file</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total kwitansi</div><div className="font-mono text-3xl font-medium tabular-nums">{totalKwitansi.toLocaleString("id-ID")}</div><div className="text-xs text-muted-foreground">SPPBukti</div></CardContent></Card>
+            <Card><CardContent className="p-3"><div className="text-xs text-muted-foreground">Total pajak</div><div className="truncate font-mono text-3xl font-medium tabular-nums" title={rp(totalPajak)}>{rp(totalPajak)}</div><div className="text-xs text-muted-foreground">potongan</div></CardContent></Card>
           </div>
 
           {/* Nominal per sumber dana */}
@@ -398,10 +398,10 @@ export default function SppView() {
         {nominalPerDana.map(([sd, v]) => (
           <div
             key={sd}
-            className="group rounded-lg border bg-background p-4 transition-all hover:border-primary/30 hover:bg-muted/30"
+            className="group rounded-none border-2 bg-background p-4 transition-all hover:border-primary/30 hover:bg-muted/30"
           >
             <div className="mb-2 flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex size-8 items-center justify-center rounded-sm bg-primary/10 text-primary">
                 <Wallet className="size-4" />
               </div>
 
@@ -470,7 +470,7 @@ export default function SppView() {
                     <span className="text-xs text-muted-foreground">{tgl(s.Tgl_SPP)}</span>
                     <b>{noS}</b>
                     <span className="flex-1 truncate">{vt(s.Keterangan)}</span>
-                    {edited && <span className="rounded bg-amber-500/20 px-1.5 text-[10px] text-amber-700 dark:text-amber-400">Diedit</span>}
+                    {edited && <span className="rounded-sm bg-warning-soft px-1.5 text-xs font-medium text-warning">Diedit</span>}
                     <span className="font-semibold">{rp(Number(s.Jumlah) || 0)}</span>
                     {kws.length > 0 && (
                       <button type="button" className="rounded border px-1.5 text-xs" title={`Cetak ${kws.length} kwitansi SPP ini`} onClick={(e) => { e.preventDefault(); bukaCetakSemua(noS); }}><Printer className="size-3" /></button>
@@ -484,11 +484,11 @@ export default function SppView() {
                       const nb = appliedBukti.find((x) => vt(x.No_SPP) === noS && vt(x.No_Bukti) === vt(b.No_Bukti)) ?? b;
                       const pots = potByBukti.get(`${noS}¦${vt(b.No_Bukti)}`) ?? [];
                       return (
-                        <div key={vt(b.No_Bukti)} className="mb-1.5 rounded-lg border border-l-4 border-l-primary/70 bg-card p-2 text-xs shadow-sm">
+                        <div key={vt(b.No_Bukti)} className="mb-1.5 rounded-none border-2 border-l-4 border-l-primary/70 bg-card p-2 text-xs">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">{vt(nb.No_Bukti)}</span>
                             <span className="flex-1 font-medium">{vt(nb.Keterangan)} — {vt(nb.Nm_Penerima)}</span>
-                            {e && <span className="rounded bg-amber-500/20 px-1.5 text-[10px] text-amber-700 dark:text-amber-400">Diedit</span>}
+                            {e && <span className="rounded-sm bg-warning-soft px-1.5 text-xs font-medium text-warning">Diedit</span>}
                             <span className="font-semibold">{rp(Number(nb.Nilai) || 0)}</span>
                             <button type="button" className="rounded border px-1.5" title="Cetak kwitansi" onClick={() => bukaCetak(noS, vt(b.No_Bukti))}><Printer className="size-3" /></button>
                             <button type="button" className="rounded border px-1.5" onClick={() => setEditCtx({ table: "Ta_SPPBukti", keys: { No_SPP: noS, No_Bukti: vt(b.No_Bukti) } })}>✎</button>

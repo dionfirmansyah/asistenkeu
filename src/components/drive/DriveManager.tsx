@@ -309,7 +309,7 @@ export default function DriveManager() {
       )}
 
       {!showManager ? (
-        <section className="rounded-lg border bg-card shadow-sm">
+        <section className="rounded-none border-2 bg-card">
           <div className="grid place-items-center gap-3 p-10 text-center">
             {auth.status === "connecting" ? (
               <>
@@ -318,7 +318,7 @@ export default function DriveManager() {
               </>
             ) : (
               <>
-                <div className="flex size-12 items-center justify-center rounded-full bg-info-soft text-primary">
+                <div className="flex size-12 items-center justify-center rounded-sm bg-info-soft text-primary">
                   <Cloud className="size-5" />
                 </div>
                 <h3 className="font-semibold">Belum terhubung ke Google Drive</h3>
@@ -337,7 +337,7 @@ export default function DriveManager() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <DriveBreadcrumb path={folder.path} onGo={folder.goTo} />
-            <div role="group" aria-label="Tampilan folder" className="flex items-center gap-0.5 rounded-md border p-0.5">
+            <div role="group" aria-label="Tampilan folder" className="flex items-center gap-0.5 rounded-sm border-2 border-border p-0.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -345,7 +345,7 @@ export default function DriveManager() {
                 aria-pressed={view === "list"}
                 title="Tampilan daftar"
                 onClick={() => changeView("list")}
-                className={view === "list" ? "bg-accent text-primary" : undefined}
+                className={view === "list" ? "rounded-sm bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "rounded-sm"}
               >
                 <LayoutList />
               </Button>
@@ -356,7 +356,7 @@ export default function DriveManager() {
                 aria-pressed={view === "grid"}
                 title="Tampilan grid"
                 onClick={() => changeView("grid")}
-                className={view === "grid" ? "bg-accent text-primary" : undefined}
+                className={view === "grid" ? "rounded-sm bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "rounded-sm"}
               >
                 <LayoutGrid />
               </Button>
@@ -388,7 +388,7 @@ export default function DriveManager() {
           )}
 
           <div
-            className={`rounded-lg ${dragging ? "ring-2 ring-primary" : ""}`}
+            className={`rounded-none ${dragging ? "ring-2 ring-primary" : ""}`}
             onDragOver={(e) => {
               e.preventDefault();
               if (canAdd) setDragging(true);
@@ -405,7 +405,7 @@ export default function DriveManager() {
             }}
           >
             {folder.error ? (
-              <div className="grid place-items-center gap-3 rounded-lg border border-l-4 border-l-destructive bg-destructive-soft p-8 text-center">
+              <div className="grid place-items-center gap-3 rounded-none border-2 border-l-4 border-l-destructive bg-destructive-soft p-8 text-center">
                 <TriangleAlert className="size-5 text-destructive" />
                 <p className="max-w-md text-sm text-destructive">{folder.error}</p>
                 <Button type="button" variant="outline" onClick={folder.refresh}>
@@ -419,8 +419,8 @@ export default function DriveManager() {
                 ))}
               </div>
             ) : folder.visible.length === 0 ? (
-              <div className="grid place-items-center gap-3 rounded-lg border bg-card p-10 text-center shadow-sm">
-                <div className="flex size-12 items-center justify-center rounded-full bg-info-soft text-primary">
+              <div className="grid place-items-center gap-3 rounded-none border-2 bg-card p-10 text-center">
+                <div className="flex size-12 items-center justify-center rounded-sm bg-info-soft text-primary">
                   {folder.results ? <SearchX className="size-5" /> : <Upload className="size-5" />}
                 </div>
                 <h3 className="font-semibold">

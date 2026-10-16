@@ -98,7 +98,7 @@ export default function SppDataView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Data register SPP</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Data register SPP</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Struktur tabel SPP yang bisa dimanfaatkan fitur lain.</p>
       </div>
       <p className="text-sm text-muted-foreground">
@@ -139,9 +139,9 @@ export default function SppDataView() {
       <Card>
         <CardHeader className="p-3 pb-1"><CardTitle>Kamus kolom — {def.name}</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full border-collapse text-[13px]">
-            <thead><tr className="bg-muted"><th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Kolom</th><th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Terisi</th><th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Contoh nilai</th></tr></thead>
+          <div className="overflow-x-auto rounded-none border-2">
+          <table className="w-full border-collapse text-sm">
+            <thead><tr className="bg-muted"><th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Kolom</th><th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Terisi</th><th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Contoh nilai</th></tr></thead>
             <tbody>
               {cols.map((c) => {
                 const filled = rows.filter((r) => vt(r[c]).trim() !== "").length;
@@ -165,9 +165,9 @@ export default function SppDataView() {
         <CardHeader className="p-3 pb-1"><CardTitle>Pratinjau — {def.name}</CardTitle></CardHeader>
         <CardContent className="space-y-2 p-3">
           <Input className="h-8 w-64 text-xs" placeholder="Cari di tabel…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-[13px]">
-              <thead><tr className="bg-muted">{cols.map((c) => <th key={c} scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">{c}</th>)}</tr></thead>
+          <div className="overflow-x-auto rounded-none border-2">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-muted">{cols.map((c) => <th key={c} scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">{c}</th>)}</tr></thead>
               <tbody>
                 {filtered.slice(0, 50).map((r, i) => (
                   <tr key={i} className="border-t hover:bg-primary/5">{cols.map((c) => <td key={c} className="h-11 max-w-64 truncate border px-3">{vt(r[c]).slice(0, 100)}</td>)}</tr>
@@ -202,7 +202,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
+        <div className="truncate font-mono text-3xl font-medium tabular-nums" title={value}>{value}</div>
         <div className="truncate text-xs text-muted-foreground" title={sub}>{sub}</div>
       </CardContent>
     </Card>

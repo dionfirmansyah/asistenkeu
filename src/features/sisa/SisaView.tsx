@@ -114,7 +114,7 @@ export default function SisaView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Sisa anggaran</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Sisa anggaran</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Pagu yang belum direncanakan dalam RPD.</p>
       </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -157,20 +157,20 @@ export default function SisaView() {
       <Card>
         <CardHeader className="p-3 pb-1"><CardTitle>Daftar sisa anggaran ({filtered.length})</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full border-collapse text-[13px]">
+          <div className="overflow-x-auto rounded-none border-2">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-muted">
-                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Kegiatan</th>
-                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Rincian</th>
-                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Uraian</th>
-                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Sumber dana</th>
-                <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Asal</th>
-                <th scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">Volume sisa</th>
-                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Pagu (Rp)</th>
-                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Rencana (Rp)</th>
-                <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Sisa (Rp)</th>
-                <th scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">Status</th>
+                <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th>
+                <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian</th>
+                <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Uraian</th>
+                <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Sumber dana</th>
+                <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Asal</th>
+                <th scope="col" className="h-10 border px-3 text-center font-mono text-xs font-medium uppercase tracking-[0.06em]">Volume sisa</th>
+                <th scope="col" className="num h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Pagu (Rp)</th>
+                <th scope="col" className="num h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rencana (Rp)</th>
+                <th scope="col" className="num h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Sisa (Rp)</th>
+                <th scope="col" className="h-10 border px-3 text-center font-mono text-xs font-medium uppercase tracking-[0.06em]">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +203,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
+        <div className="truncate font-mono text-2xl font-medium tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>

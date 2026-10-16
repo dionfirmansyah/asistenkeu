@@ -196,7 +196,7 @@ export default function RekapPajakView() {
     <div className="space-y-4">
       {confirmNode}
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Rekap pajak</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Rekap pajak</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Setoran pajak (SSP) dari file pajak Siskeudes.</p>
       </div>
       <Card>
@@ -277,17 +277,17 @@ export default function RekapPajakView() {
           <Card>
             <CardHeader className="p-3 pb-1"><CardTitle>Rekap pajak ({filtered.length})</CardTitle></CardHeader>
             <CardContent className="overflow-x-auto p-3">
-              <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full border-collapse text-[13px]">
+              <div className="overflow-x-auto rounded-none border-2">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="bg-muted">
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">No SSP</th>
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Tanggal</th>
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Keterangan</th>
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Jenis pajak</th>
-                    <th scope="col" className="num h-10 border px-3 text-[13px] font-semibold">Nilai (Rp)</th>
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">NTPN</th>
-                    <th scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">No bukti</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">No SSP</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Tanggal</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Keterangan</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Jenis pajak</th>
+                    <th scope="col" className="num h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Nilai (Rp)</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">NTPN</th>
+                    <th scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">No bukti</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -353,7 +353,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
+        <div className="truncate font-mono text-3xl font-medium tabular-nums" title={value}>{value}</div>
         <div className="truncate text-xs text-muted-foreground" title={sub}>{sub}</div>
       </CardContent>
     </Card>
@@ -382,7 +382,7 @@ function CopyCell({ text }: { text: string }) {
       aria-label={copied ? "Tersalin" : `Salin: ${text}`}
       onClick={salin}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void salin(); } }}
-      className={`cursor-pointer rounded px-0.5 underline decoration-dotted underline-offset-2 hover:bg-accent ${copied ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : ""}`}
+      className={`cursor-pointer rounded-sm px-0.5 underline decoration-dotted underline-offset-2 hover:bg-accent ${copied ? "bg-success-soft text-success" : ""}`}
     >
       {copied ? "Tersalin!" : text}
     </span>

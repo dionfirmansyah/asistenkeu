@@ -146,7 +146,7 @@ export default function RekonView() {
       {confirmNode}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-primary">Rekonsiliasi kas</h2>
+            <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Rekonsiliasi kas</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">Cocokkan saldo kas riil dengan saldo Siskeudes.</p>
           </div>
           <div className="flex gap-2">
@@ -178,7 +178,7 @@ export default function RekonView() {
             }
             const selisih = (Math.round(x.bku) + aB) - (Math.round(x.brankas) + aBr);
             return (
-              <div key={x.id} className="relative rounded-lg border transition hover:bg-accent bg-gray-50 dark:bg-gray-800">
+              <div key={x.id} className="relative rounded-none border-2 bg-secondary transition hover:bg-accent">
                 <button type="button" onClick={() => { window.location.hash = `/rekon/${x.id}`; }} className="block w-full p-4 text-left">
                   <div className="font-semibold">{x.judul || "Rekonsiliasi"}</div>
                   <div className="mt-1 text-xs text-muted-foreground">Periode {x.periode || "-"} · {x.items.length} item</div>
@@ -213,7 +213,7 @@ export default function RekonView() {
       {confirmNode}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-primary">{r.judul || "Rekonsiliasi"}</h2>
+          <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">{r.judul || "Rekonsiliasi"}</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">Rincian penyesuaian dan ringkasan selisih kas.</p>
         </div>
         <div className="flex gap-2">
@@ -281,8 +281,8 @@ export default function RekonView() {
       <Card>
         <CardHeader className="p-3 pb-1"><CardTitle>Penyesuaian</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto p-4 md:p-5">
-          <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full table-fixed text-[13px]">
+          <div className="overflow-x-auto rounded-none border-2">
+          <table className="w-full table-fixed text-sm">
             <colgroup>
               <col className="w-10" />
               <col className="w-52" />
@@ -295,11 +295,11 @@ export default function RekonView() {
             <thead>
               <tr className="bg-muted text-left">
                 <th scope="col" className="h-10 w-10" aria-label="Urutkan" />
-                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Jenis item</th>
-                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Uraian</th>
-                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Mempengaruhi</th>
-                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Arah</th>
-                <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
+                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Jenis item</th>
+                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Uraian</th>
+                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Mempengaruhi</th>
+                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Arah</th>
+                <th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Nilai</th>
                 <th scope="col" className="h-10 px-3" />
               </tr>
             </thead>
@@ -356,7 +356,7 @@ export default function RekonView() {
                     </span>
                   </td>
                   <td className="h-11 px-3 py-1">
-                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.jenis} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, jenis: e.target.value } : x)) })}>
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-sm" value={i.jenis} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, jenis: e.target.value } : x)) })}>
                       {JENIS_ITEMS.map((j) => <option key={j} value={j}>{j}</option>)}
                     </select>
                   </td>
@@ -378,7 +378,7 @@ export default function RekonView() {
                     )}
                   </td>
                   <td className="h-11 px-3 py-1">
-                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.sisi === SISI_BKU || i.sisi === SISI_BRANKAS || r.sumber.some((d) => d.id === i.sisi) ? i.sisi : "__hilang__"} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, sisi: e.target.value } : x)) })}>
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-sm" value={i.sisi === SISI_BKU || i.sisi === SISI_BRANKAS || r.sumber.some((d) => d.id === i.sisi) ? i.sisi : "__hilang__"} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, sisi: e.target.value } : x)) })}>
                       <option value={SISI_BKU}>Kas Siskeudes</option>
                       <option value={SISI_BRANKAS}>Brankas (tunai)</option>
                       {r.sumber.map((d) => <option key={d.id} value={d.id}>{d.nama.trim() || "(tanpa nama)"}</option>)}
@@ -388,7 +388,7 @@ export default function RekonView() {
                     </select>
                   </td>
                   <td className="h-11 px-3 py-1">
-                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-[13px]" value={i.arah} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, arah: e.target.value as Item["arah"] } : x)) })}>
+                    <select className="h-8 w-full rounded-md border border-input bg-card px-1 text-sm" value={i.arah} onChange={(e) => set({ items: r.items.map((x, j) => (j === idx ? { ...x, arah: e.target.value as Item["arah"] } : x)) })}>
                       <option value="+">Menambah (+)</option>
                       <option value="-">Mengurangi (−)</option>
                     </select>

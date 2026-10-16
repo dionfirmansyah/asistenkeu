@@ -54,7 +54,7 @@ export default function DashboardView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Dashboard</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Dashboard</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Ringkasan keuangan desa dari file Siskeudes.</p>
       </div>
       {/* Identitas desa */}
@@ -65,7 +65,7 @@ export default function DashboardView() {
               <h1 className="text-xl font-bold">Desa {ident.desa || "-"}</h1>
               <p className="text-sm text-muted-foreground">Kecamatan {ident.kecamatan || "-"} · Tahun Anggaran {ident.tahun || "-"}{ident.statusIdm ? ` · Status IDM: ${ident.statusIdm}` : ""}</p>
             </div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{flat.length.toLocaleString("id-ID")} baris RAB</span>
+            <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-xs font-medium uppercase tracking-[0.06em] text-accent-foreground">{flat.length.toLocaleString("id-ID")} baris RAB</span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
             <div className="rounded-md border bg-card/60 p-2"><div className="text-muted-foreground">Kepala Desa</div><b>{ident.kades || "-"}</b></div>
@@ -211,7 +211,7 @@ export default function DashboardView() {
                 const pct = tot ? Math.round((d.total / tot) * 100) : 0;
                 return (
                   <li key={d.name} className="flex items-center gap-2 text-sm">
-                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: danaFill(d.name) }} />
+                    <span className="size-2.5 shrink-0 rounded-none" style={{ background: danaFill(d.name) }} />
                     <DanaBadge value={d.name} />
                     <span className="ml-auto font-semibold">{pct}%</span>
                     <span className="w-20 shrink-0 text-right text-xs text-muted-foreground" title={rp(d.total)}>
@@ -275,11 +275,11 @@ export default function DashboardView() {
       <Card>
         <CardHeader className="p-3 pb-1"><CardTitle>10 belanja terbesar</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-[13px]">
+          <div className="overflow-x-auto rounded-none border-2">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted text-left">
-                <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Rincian</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Semula</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Perubahan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Menjadi</th>
+                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Semula</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Perubahan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Menjadi</th>
               </tr>
             </thead>
             <tbody>
@@ -302,9 +302,9 @@ export default function DashboardView() {
       <Card>
         <CardHeader className="p-3 pb-1"><CardTitle>Kegiatan dengan perubahan terbesar</CardTitle></CardHeader>
         <CardContent className="p-3 overflow-x-auto">
-          <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-[13px]">
-            <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Semula</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Menjadi</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Selisih</th></tr></thead>
+          <div className="overflow-x-auto rounded-none border-2">
+          <table className="w-full text-sm">
+            <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Semula</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Menjadi</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Selisih</th></tr></thead>
             <tbody>
               {changes.map((x) => (
                 <tr key={x.name} className="border-t hover:bg-primary/5">
@@ -331,7 +331,7 @@ function Kpi({ label, value, sub, icon: Icon }: { label: string; value: string; 
           <div className="text-xs text-muted-foreground">{label}</div>
           {Icon && <Icon className="size-4 text-primary" />}
         </div>
-        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
+        <div className="truncate font-mono text-2xl font-medium tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>
@@ -342,9 +342,9 @@ function GroupTable({ rows, field, basis }: { rows: Parameters<typeof aggregate>
   const agg = aggregate(rows, field, basis).filter((x) => x.name);
   const tot = agg.reduce((s, x) => s + x.total, 0);
   return (
-    <div className="overflow-x-auto rounded-lg border">
-    <table className="w-full text-[13px]">
-      <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">{field === "SumberDana" ? "Sumber dana" : "PPTKD"}</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Rincian</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Kegiatan</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Total</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">%</th></tr></thead>
+    <div className="overflow-x-auto rounded-none border-2">
+    <table className="w-full text-sm">
+      <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">{field === "SumberDana" ? "Sumber dana" : "PPTKD"}</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Total</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">%</th></tr></thead>
       <tbody>
         {agg.map((x) => (
           <tr key={x.name} className="border-t hover:bg-primary/5">

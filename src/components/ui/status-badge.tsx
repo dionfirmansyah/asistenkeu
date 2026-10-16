@@ -10,11 +10,21 @@ const TONE_CLASS: Record<StatusTone, string> = {
   neutral: "bg-muted text-muted-foreground",
 };
 
-/** Pil status dengan titik penanda — status selalu disertai teks, bukan hanya warna. */
+const TONE_SYMBOL: Record<StatusTone, string> = {
+  success: "✓",
+  destructive: "✕",
+  warning: "!",
+  info: "i",
+  neutral: "–",
+};
+
+/** Lencana status: simbol + teks mono kapital, border sewarna teks. Status selalu disertai teks, bukan hanya warna. */
 export function StatusBadge({ tone, children }: { tone: StatusTone; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
-      <span className="size-1.5 rounded-full bg-current" />
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-[2px] border border-current px-2 py-0.5 font-mono text-xs font-medium tracking-[0.06em] uppercase ${TONE_CLASS[tone]}`}
+    >
+      <span aria-hidden="true">{TONE_SYMBOL[tone]}</span>
       {children}
     </span>
   );

@@ -201,7 +201,7 @@ export default function PajakView() {
     <div className="space-y-4">
       {confirmNode}
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Kalkulator pajak</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Kalkulator pajak</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Simulasi potongan pajak belanja desa sesuai tarif terbaru.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -278,12 +278,12 @@ export default function PajakView() {
                   <dd className="text-right font-medium">{s.kat === "konsumsi" || s.kat === "galian" ? "Tidak berlaku" : s.npwp === "ya" ? "Punya NPWP" : "Tidak punya NPWP"}</dd>
                 </div>
               </dl>
-              <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full text-[13px]">
+              <div className="overflow-x-auto rounded-none border-2">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted text-left">
-                      <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Potongan</th>
-                      <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
+                      <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Potongan</th>
+                      <th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Nilai</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -297,7 +297,7 @@ export default function PajakView() {
                 </table>
               </div>
               {s.kat === "konsumsi" && <p className="text-xs text-muted-foreground">Konsumsi tidak kena PPN/PPh — hanya pajak daerah.</p>}
-              <dl className="space-y-1.5 rounded-lg border bg-muted/40 p-3 text-sm">
+              <dl className="space-y-1.5 rounded-none border-2 bg-muted/40 p-3 text-sm">
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="font-semibold">Total potongan</dt>
                   <dd className="num font-semibold">{rp(pot)}</dd>
@@ -308,7 +308,7 @@ export default function PajakView() {
                 </div>
               </dl>
               {potBulat !== pot && (
-                <div className="space-y-1.5 rounded-lg border p-3 text-sm">
+                <div className="space-y-1.5 rounded-none border-2 p-3 text-sm">
                   <div className="text-xs font-medium text-muted-foreground">Saran pembulatan (kelipatan Rp100)</div>
                   {lines.map((l, i) => (
                     <div key={i} className="flex items-baseline justify-between gap-3">
@@ -347,16 +347,16 @@ export default function PajakView() {
             <p className="text-sm text-muted-foreground">Belum ada simulasi tersimpan. Simulasi yang disimpan bisa dibuka lagi, dimuat ke kalkulator, atau dicetak.</p>
           )}
           {!!saved.length && (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-[13px]">
+            <div className="overflow-x-auto rounded-none border-2">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-muted text-left">
-                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Tanggal</th>
-                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Uraian</th>
-                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Kategori</th>
-                    <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nilai</th>
-                    <th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Potongan</th>
-                    <th scope="col" className="h-10 px-3 text-[13px] font-semibold">Aksi</th>
+                    <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Tanggal</th>
+                    <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Uraian</th>
+                    <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kategori</th>
+                    <th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Nilai</th>
+                    <th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Potongan</th>
+                    <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -406,9 +406,9 @@ export default function PajakView() {
               <details key={a.id} className={`rounded-md border ${dipakai ? "border-primary/50 bg-primary/5" : ""}`}>
                 <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-sm">
                   <span className="font-medium">{a.nama}</span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{a.tarif}</span>
+                  <span className="rounded-sm bg-secondary px-2 py-0.5 text-xs">{a.tarif}</span>
                   {dipakai && (
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                    <span className="rounded-sm bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
                       Dipakai simulasi ini
                     </span>
                   )}

@@ -272,7 +272,7 @@ export default function RpdView() {
       {confirmNode}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-primary">Rencana penggunaan</h2>
+            <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Rencana penggunaan</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">Dokumen rencana penggunaan dana per kegiatan.</p>
           </div>
           <Button size="sm" onClick={() => setModal("new")}>RPD baru</Button>
@@ -292,7 +292,7 @@ export default function RpdView() {
                   const id = e.dataTransfer.getData("text/plain");
                   if (id) void moveDoc(id, col.id);
                 }}
-                className="flex min-h-[calc(100svh-var(--header-h)-7rem)] flex-col gap-2 rounded-lg border bg-muted/40 p-2"
+                className="flex min-h-[calc(100svh-var(--header-h)-7rem)] flex-col gap-2 rounded-none border-2 bg-muted/40 p-2"
               >
                 <div className="flex items-center gap-2 px-1 pt-1">
                   <StatusBadge tone={col.tone}>{col.label}</StatusBadge>
@@ -303,7 +303,7 @@ export default function RpdView() {
                     key={d.id}
                     draggable
                     onDragStart={(e) => { e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move"; }}
-                    className="rounded-lg border bg-card p-3 shadow-sm transition hover:border-primary/30"
+                    className="rounded-none border-2 bg-card p-3 transition hover:border-primary/30"
                   >
                     <div className="flex items-start gap-2">
                       <button
@@ -340,7 +340,7 @@ export default function RpdView() {
                   </div>
                 ))}
                 {!colDocs.length && (
-                  <p className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
+                  <p className="rounded-none border-2 border-dashed p-4 text-center text-xs text-muted-foreground">
                     Belum ada — seret kartu ke sini
                   </p>
                 )}
@@ -458,7 +458,7 @@ export default function RpdView() {
             </div>
           </div>
           {/* Langkah 1-2-3 */}
-          <div className="mt-3 flex items-center gap-2 text-[11px] font-medium">
+          <div className="mt-3 flex items-center gap-2 text-xs font-medium">
             <StepDot n={1} aktif done={!!keg} label="Kegiatan" />
             <div className={`h-px flex-1 ${keg ? "bg-primary" : "bg-border"}`} />
             <StepDot n={2} aktif={!!keg} done={!!rinc} label="Rincian" />
@@ -493,13 +493,13 @@ export default function RpdView() {
         </div>
         <CardContent className="space-y-2 p-3">
           {!keg && (
-            <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
+            <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-none border-2 border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
               <div className="text-2xl">🧭</div>
               <div className="mt-1 font-medium">Mulai dengan memilih kegiatan di atas</div>
               <div className="text-xs">Gunakan kolom pencarian untuk menemukan kegiatan dengan cepat</div>
             </button>
           )}
-          {keg && !rinc && <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
+          {keg && !rinc && <p className="rounded-none border-2 border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
           {visible.map((it) => {
             const used = usedOf(it.key);
             const sisaVol = Math.max(0, it.vol - used.vol);
@@ -510,7 +510,7 @@ export default function RpdView() {
             const amtKini = amtOf(it);
             const overAmt = terisi && amtKini > sisaAmt + 1;
             return (
-              <div key={it.key} className={`rounded-lg border p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5 shadow-sm" : "hover:border-primary/30"}`}>
+              <div key={it.key} className={`rounded-none border-2 p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5" : "hover:border-primary/30"}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{it.r.Uraian}</div>
@@ -524,7 +524,7 @@ export default function RpdView() {
                   <StatChip label="Sisa vol" value={`${nfInt0(sisaVol)}`} tone={sisaVol <= 0 ? "habis" : undefined} />
                   <StatChip label="Sisa Rp" value={rp(sisaAmt)} tone={sisaAmt <= 0 ? "habis" : undefined} />
                 </div>
-                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-none bg-muted/50 p-2">
                   <label className="flex items-center gap-2 text-xs font-medium">Volume
                     <Input className={`h-9 w-28 text-right font-semibold ${over ? "border-destructive" : ""}`} type="number" min={0} step="any" placeholder="0" value={vols[it.key] ?? ""} onChange={(e) => setVols({ ...vols, [it.key]: e.target.value })} />
                   </label>
@@ -550,7 +550,7 @@ export default function RpdView() {
             const n = visible.filter((it) => (Number(vols[it.key]) || 0) > 0).length;
             const tot = visible.reduce((s, it) => s + ((Number(vols[it.key]) || 0) > 0 ? amtOf(it) : 0), 0);
             return (
-              <div className="sticky bottom-2 flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 shadow-lg">
+              <div className="sticky bottom-2 flex items-center justify-between gap-2 rounded-none border-2 bg-card p-2.5 shadow-lg">
                 <span className="text-xs text-muted-foreground">
                   {n ? `${n} item · ${rp(tot)}${bulan === "" ? " · tanpa bulan" : ` · ${BLN[Number(bulan)]}`}` : "Belum ada volume diisi"}
                   {adaLebih && " · ada yang melebihi sisa"}
@@ -604,9 +604,9 @@ export default function RpdView() {
         <Card>
           <CardHeader className="p-3 pb-1"><CardTitle>Sumber dana pada RPD aktif</CardTitle></CardHeader>
           <CardContent className="p-3 overflow-x-auto">
-            <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-[13px]">
-              <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 text-[13px] font-semibold">Sumber dana</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Baris RPD</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">Nominal RPD</th><th scope="col" className="num h-10 px-3 text-[13px] font-semibold">%</th></tr></thead>
+            <div className="overflow-x-auto rounded-none border-2">
+            <table className="w-full text-sm">
+              <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Sumber dana</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Baris RPD</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Nominal RPD</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">%</th></tr></thead>
               <tbody>
                 {dana.map((d) => (
                   <tr key={d.sd} className="border-t hover:bg-primary/5">
@@ -707,20 +707,20 @@ function RpdPlanTable({
         value={planSearch}
         onChange={(e) => setPlanSearch(e.target.value)}
       />
-      <table className="w-full border-collapse text-[13px]">
+      <table className="w-full border-collapse text-sm">
       <thead>
         <tr className="bg-muted">
-          <th rowSpan={2} scope="col" className="h-10 border px-3 text-center text-[13px] font-semibold">No</th>
-          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Kode</th>
-          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left text-[13px] font-semibold">Uraian</th>
-          <th colSpan={4} scope="col" className="h-10 border px-3 text-[13px] font-semibold">Rencana</th>
-          <th rowSpan={2} scope="col" className="h-10 border px-3 text-[13px] font-semibold">Aksi</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-center font-mono text-xs font-medium uppercase tracking-[0.06em]">No</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Kode</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">Uraian</th>
+          <th colSpan={4} scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rencana</th>
+          <th rowSpan={2} scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Aksi</th>
         </tr>
         <tr className="bg-muted">
-          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Sumber dana</th>
-          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Volume</th>
-          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Harga satuan (Rp)</th>
-          <th scope="col" className="h-10 border px-3 text-[13px] font-semibold">Jumlah (Rp)</th>
+          <th scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Sumber dana</th>
+          <th scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Volume</th>
+          <th scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Harga satuan (Rp)</th>
+          <th scope="col" className="h-10 border px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Jumlah (Rp)</th>
         </tr>
       </thead>
       <tbody>
@@ -860,7 +860,7 @@ function StatChip({ label, value, tone }: { label: string; value: string; tone?:
 function StepDot({ n, aktif, done, label }: { n: number; aktif: boolean; done: boolean; label: string }) {
   return (
     <span className={`flex items-center gap-1.5 ${aktif || done ? "" : "opacity-40"}`}>
-      <span className={`flex size-5 items-center justify-center rounded-full text-[10px] font-bold ${done ? "bg-primary text-primary-foreground" : aktif ? "border-2 border-primary text-primary" : "border border-muted-foreground text-muted-foreground"}`}>
+      <span className={`flex size-5 items-center justify-center rounded-sm text-xs font-bold ${done ? "bg-primary text-primary-foreground" : aktif ? "border-2 border-primary text-primary" : "border border-muted-foreground text-muted-foreground"}`}>
         {done ? "✓" : n}
       </span>
       {label}
@@ -882,7 +882,7 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub: string 
     <Card>
       <CardContent className="p-3">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-2xl font-semibold tabular-nums" title={value}>{value}</div>
+        <div className="truncate font-mono text-3xl font-medium tabular-nums" title={value}>{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </CardContent>
     </Card>

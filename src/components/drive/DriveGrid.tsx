@@ -28,10 +28,10 @@ export function DriveGrid({ items, busyId, ...actions }: DriveGridProps) {
           <li
             key={item.id}
             aria-busy={busy || undefined}
-            className={`group relative flex flex-col gap-2 rounded-lg border bg-card p-3 hover:border-primary/40 ${busy ? "opacity-60" : ""}`}
+            className={`group relative flex flex-col gap-2 rounded-none border-2 bg-card p-3 hover:border-primary/40 ${busy ? "opacity-60" : ""}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="flex size-10 items-center justify-center rounded-lg bg-info-soft text-primary">
+              <span className="flex size-10 items-center justify-center rounded-sm bg-info-soft text-primary">
                 <Icon className="size-5" />
               </span>
               {/* Di atas lapisan klik agar menu tetap bisa dibuka sendiri. */}

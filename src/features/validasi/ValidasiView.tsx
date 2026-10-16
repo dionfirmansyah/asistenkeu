@@ -24,7 +24,7 @@ export default function ValidasiView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Validasi data</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Validasi data</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Pemeriksaan konsistensi data Siskeudes.</p>
       </div>
       <div className="flex flex-wrap gap-2 text-sm">
@@ -33,7 +33,7 @@ export default function ValidasiView() {
         ))}
       </div>
       {sorted.map((v, i) => (
-        <details key={i} className="rounded-lg border bg-card px-4 py-3 text-sm shadow-sm">
+        <details key={i} className="rounded-none border-2 bg-card px-4 py-3 text-sm">
           <summary className="flex cursor-pointer items-center gap-2">
             <StatusBadge tone={TONE[v.level]}>{LABEL[v.level]}</StatusBadge>
             <span className="text-xs text-muted-foreground">{v.group}</span>

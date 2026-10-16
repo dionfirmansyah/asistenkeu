@@ -57,7 +57,7 @@ export default function StrukturView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Struktur RAB</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Struktur RAB</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Susunan anggaran per bidang, kegiatan, dan rincian.</p>
       </div>
       <div className="space-y-3">
@@ -143,7 +143,7 @@ function ItemRow({ r, basis, forceOpen }: { r: RabFlatRow; basis: Basis; forceOp
           ) : (
             <><b>{r.No_Urut}.</b> {r.Uraian}</>
           )}
-          {r.Asal === "SILPA" && <span className="ml-1 rounded bg-secondary px-1 text-[10px]">SiLPA</span>}
+          {r.Asal === "SILPA" && <span className="ml-1 rounded-sm bg-secondary px-1 text-xs">SiLPA</span>}
         </span>
         <span className="font-semibold">{rp(Number(r[basis]) || 0)}</span>
       </summary>

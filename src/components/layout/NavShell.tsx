@@ -160,24 +160,24 @@ export default function NavShell() {
   return (
     <div className="flex w-full flex-col md:flex-row">
       {/* Sidebar desktop */}
-      <aside className="hidden w-64 shrink-0 border-r bg-card md:block">
+      <aside className="hidden w-64 shrink-0 border-r-[3px] border-sidebar-border bg-sidebar md:block">
         <div className="sticky top-[var(--header-h)] flex h-[calc(100vh-var(--header-h))] flex-col">
           <ScrollArea className="min-h-0 flex-1">
             <nav aria-label="Navigasi aplikasi" className="px-2 py-2">
               {SECTIONS.map((s) => (
                 <div key={s.title}>
-                  <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">{s.title}</div>
+                  <div className="px-3 pb-1 pt-4 font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">{s.title}</div>
                   {s.items.map((it) => {
                     const isActive = active === it.id;
                     return (
                       <Button
                         key={it.id}
                         variant="ghost"
-                        className={`relative h-10 w-full items-center justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-gold hover:bg-accent hover:text-gold" : "text-foreground/80 hover:bg-accent"}`}
+                        className={`relative h-11 w-full items-center justify-start gap-3 rounded-none px-3 font-display text-[15px] font-bold ${isActive ? "bg-accent text-accent-graphic hover:bg-accent hover:text-accent-graphic" : "font-medium text-foreground/80 hover:bg-accent hover:text-accent-graohic"}`}
                         aria-current={isActive ? "page" : undefined}
                         onClick={() => go(it.id)}
                       >
-                        {isActive && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-gold" />}
+                        {isActive && <span className="absolute inset-y-0 left-0 w-1 bg-accent-graphic" aria-hidden="true" />}
                         <it.icon className="size-5 shrink-0" />
                         <span className="truncate">{it.label}</span>
                       </Button>
@@ -188,24 +188,24 @@ export default function NavShell() {
             </nav>
           </ScrollArea>
 
-          <div className="shrink-0 space-y-2 border-t p-3">
-            <div className="text-xs font-medium text-muted-foreground">File aktif</div>
+          <div className="shrink-0 space-y-2 border-t-2 border-sidebar-border p-3">
+            <div className="font-mono text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">File aktif</div>
             <FileRow
               label="RAB (Siskeudes)"
               name={fileName}
               inputRef={rabRef}
               onPick={gantiRab}
             >
-              {fileName && <Badge variant="secondary" className="text-[10px]">{flat.length.toLocaleString("id-ID")} baris RAB</Badge>}
+              {fileName && <Badge variant="secondary" className="text-xs">{flat.length.toLocaleString("id-ID")} baris RAB</Badge>}
             </FileRow>
             <FileRow label="SPP" name={sppName} inputRef={sppRef} onPick={gantiSpp} />
             <FileRow label="Pajak" name={pajakName} inputRef={pajakRef} onPick={gantiPajak} />
-            {fileMsg && <div className="text-[11px] text-muted-foreground">{fileMsg}</div>}
+            {fileMsg && <div className="text-xs text-muted-foreground">{fileMsg}</div>}
           </div>
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1 px-4 pb-24 pt-4 md:px-6 md:pb-6">
+      <div className="min-w-0 flex-1 px-4 pb-24 pt-4 md:px-8 md:pb-6 lg:px-12">
       <section key={fileBump}>
         <Suspense fallback={<ViewFallback />}>
         {active === "dashboard" ? (
@@ -254,7 +254,7 @@ export default function NavShell() {
                 <Button
                   key={it.id}
                   variant="ghost"
-                  className={`h-10 justify-start gap-3 rounded-md px-3 text-sm font-normal ${isActive ? "bg-accent font-medium text-primary" : "text-foreground/80"}`}
+                  className={`h-11 justify-start gap-3 rounded-none px-3 font-display text-[15px] font-bold ${isActive ? "bg-accent font-bold text-accent-foreground" : "font-medium text-foreground/80"}`}
                   onClick={() => { setMenuOpen(false); go(it.id); }}
                 >
                   <it.icon className="size-5 shrink-0" />
@@ -276,7 +276,7 @@ export default function NavShell() {
                 className={`flex min-h-10 flex-col items-center justify-center gap-1 ${isActive ? "font-medium text-primary" : "text-muted-foreground"}`}
               >
                 <it.icon className="size-5" />
-                <span className="px-0.5 text-center text-[11px] leading-tight">{it.label}</span>
+                <span className="px-0.5 text-center text-xs leading-tight">{it.label}</span>
               </button>
             );
           })}
@@ -287,7 +287,7 @@ export default function NavShell() {
             className={`flex min-h-10 flex-col items-center justify-center gap-1 ${menuOpen ? "font-medium text-primary" : "text-muted-foreground"}`}
           >
             <LayoutGrid className="size-5" />
-            <span className="text-[11px] leading-tight">Menu</span>
+            <span className="text-xs leading-tight">Menu</span>
           </button>
         </div>
       </nav>
@@ -301,10 +301,10 @@ function ViewFallback() {
       <div className="h-8 w-56 animate-pulse rounded-md bg-muted" />
       <div className="grid gap-2 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+          <div key={i} className="h-20 animate-pulse rounded-none bg-muted" />
         ))}
       </div>
-      <div className="h-64 animate-pulse rounded-lg bg-muted" />
+      <div className="h-64 animate-pulse rounded-none bg-muted" />
     </div>
   );
 }
@@ -325,17 +325,17 @@ function FileRow({
   return (
     <div>
       <div className="flex items-center justify-between gap-1">
-        <div className="text-[10px] font-medium text-muted-foreground">{label}</div>
+        <div className="text-xs font-medium text-muted-foreground">{label}</div>
         <button
           type="button"
-          className="shrink-0 rounded px-1 text-[10px] font-medium text-primary hover:bg-accent"
+          className="shrink-0 rounded-sm px-1 text-xs font-medium text-primary hover:bg-accent"
           title={`Ganti file ${label}`}
           onClick={() => inputRef.current?.click()}
         >
           Ganti
         </button>
       </div>
-      <div className={`truncate text-xs ${name ? "font-medium" : "text-muted-foreground"}`} title={name ?? ""}>
+      <div className={`truncate font-mono text-xs ${name ? "font-medium" : "text-muted-foreground"}`} title={name ?? ""}>
         {name ?? "Belum ada"}
       </div>
       {children}

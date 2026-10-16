@@ -124,7 +124,7 @@ function NameButton({ item, onOpen }: { item: DriveItem; onOpen: (item: DriveIte
     >
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="truncate font-medium">{item.name}</span>
-      {isShortcut(item) && <span className="shrink-0 text-[11px] text-muted-foreground">Pintasan</span>}
+      {isShortcut(item) && <span className="shrink-0 text-xs text-muted-foreground">Pintasan</span>}
     </button>
   );
 }
@@ -134,20 +134,20 @@ export function DriveList({ items, busyId, ...actions }: DriveListProps) {
   return (
     <>
       {/* Desktop */}
-      <div className="hidden overflow-x-auto rounded-lg border md:block">
-        <table className="w-full text-[13px]">
+      <div className="hidden overflow-x-auto rounded-none border-2 md:block">
+        <table className="w-full text-sm">
           <thead className="sticky top-0 bg-muted">
             <tr className="border-b">
-              <th scope="col" className="h-10 px-3 text-left font-semibold">
+              <th scope="col" className="h-10 px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">
                 Nama
               </th>
-              <th scope="col" className="h-10 px-3 text-right font-semibold">
+              <th scope="col" className="h-10 px-3 text-right font-mono text-xs font-medium uppercase tracking-[0.06em]">
                 Ukuran
               </th>
-              <th scope="col" className="h-10 px-3 text-left font-semibold">
+              <th scope="col" className="h-10 px-3 text-left font-mono text-xs font-medium uppercase tracking-[0.06em]">
                 Terakhir diubah
               </th>
-              <th scope="col" className="h-10 px-3 text-right font-semibold">
+              <th scope="col" className="h-10 px-3 text-right font-mono text-xs font-medium uppercase tracking-[0.06em]">
                 <span className="sr-only">Aksi</span>
               </th>
             </tr>
@@ -188,7 +188,7 @@ export function DriveList({ items, busyId, ...actions }: DriveListProps) {
       </div>
 
       {/* Mobile */}
-      <ul className="divide-y rounded-lg border md:hidden">
+      <ul className="divide-y rounded-none border-2 md:hidden">
         {items.map((item) => {
           const busy = busyId === item.id;
           return (

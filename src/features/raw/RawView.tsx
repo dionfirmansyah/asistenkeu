@@ -35,7 +35,7 @@ export default function RawView() {
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-primary">Data database</h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Data database</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">Isi mentah tabel hasil decode file .SMD.</p>
       </div>
       <div className="space-y-2">
@@ -53,11 +53,11 @@ export default function RawView() {
         <Button variant="outline" size="sm" onClick={async () => { const ok = await copyText(toCSV(cols.map((c) => [c, c] as [string, string]), filtered)); setCopied(ok); setTimeout(() => setCopied(false), 1400); if (ok) toast.success("CSV disalin ke clipboard."); else toast.error("Gagal menyalin.", { duration: Infinity }); }}>{copied ? "Tersalin" : "Salin CSV"}</Button>
         <Button variant="outline" size="sm" onClick={() => { download(`${baseName}_${current}.csv`, toCSV(cols.map((c) => [c, c] as [string, string]), filtered)); toast.success("Berkas CSV terunduh."); }}>Unduh CSV</Button>
       </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-[13px]">
+      <div className="overflow-x-auto rounded-none border-2">
+        <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted text-left">
-              {cols.map((c) => <th key={c} scope="col" className="h-10 px-3 text-[13px] font-semibold">{c}</th>)}
+              {cols.map((c) => <th key={c} scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">{c}</th>)}
             </tr>
           </thead>
           <tbody>
