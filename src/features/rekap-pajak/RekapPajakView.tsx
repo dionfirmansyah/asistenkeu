@@ -430,6 +430,7 @@ function PajakForm({
           value={noSsp}
           onChange={(v) => { setNoSsp(v); setNoBukti(""); }}
           placeholder="Cari & pilih SSP…"
+          className="h-9"
         />
       </label>
       <label className="block space-y-1 text-xs font-medium">No bukti / kwitansi (opsional)
@@ -439,6 +440,7 @@ function PajakForm({
           onChange={setNoBukti}
           placeholder={noSsp ? "Pilih bukti…" : "Pilih SSP dulu…"}
           disabled={!noSsp}
+          className="h-9"
         />
       </label>
       <div className="grid grid-cols-2 gap-2">
@@ -453,7 +455,7 @@ function PajakForm({
           )}
         </label>
         <label className="block space-y-1 text-xs font-medium">Nilai (Rp)
-          <MoneyInput value={nilai} onChange={setNilai} />
+          <MoneyInput className="h-9" value={nilai} onChange={setNilai} />
         </label>
       </div>
       <label className="block space-y-1 text-xs font-medium">NTPN (opsional)

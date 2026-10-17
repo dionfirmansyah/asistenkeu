@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ComboboxField } from "@/components/ui/combobox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useConfirm } from "@/hooks/use-confirm";
 import { buildRpdPrintDoc, rekName } from "./print";
 import { ArrowLeft, ChevronDown, Eraser, FileDown, FileSpreadsheet, FileUp, Pencil, Plus, Printer, Trash2 } from "lucide-react";
@@ -64,6 +65,9 @@ export default function RpdView() {
     amts[it.key] !== undefined && amts[it.key] !== "" ? Number(amts[it.key].replace(/\./g, "").replace(",", ".")) || 0 : Math.round((Number(vols[it.key]) || 0) * it.price);
   const [bulan, setBulan] = useState("");
   const [modal, setModal] = useState<"new" | "edit" | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overCol, setOverCol] = useState<DocStatus | null>(null);
+  const [overCard, setOverCard] = useState<{ id: string; pos: "before" | "after" } | null>(null);
   const { confirmNode, confirm, notify } = useConfirm();
   const [ioMsg, setIoMsg] = useState("");
   const importRef = useRef<HTMLInputElement>(null);
@@ -121,7 +125,11 @@ export default function RpdView() {
   }, [items, keg, rinc, search]);
 
   const reload = async () => {
-    const ds = (await idbAll<RpdDoc>("docs", scope)).sort((a, b) => (b.updated || b.ts || 0) - (a.updated || a.ts || 0));
+    const ds = (await idbAll<RpdDoc>("docs", scope)).sort((a, b) => {
+      const oa = a.ord ?? Number.MAX_SAFE_INTEGER;
+      const ob = b.ord ?? Number.MAX_SAFE_INTEGER;
+      return oa - ob || (b.updated || b.ts || 0) - (a.updated || a.ts || 0);
+    });
     rememberCache(`docs:${scope}`, ds);
     setDocs(ds);
     const ents = await idbAll<RpdEntry>("entries", scope);
@@ -131,19 +139,46 @@ export default function RpdView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void reload(); }, [scope, docId]);
 
-  const moveDoc = async (id: string, status: DocStatus) => {
+  // Pindahkan dokumen ke kolom `status`; `beforeId` = sisip tepat sebelum kartu itu
+  // (null = akhir kolom tujuan). Urutan dipersist lewat field `ord` (0..n-1).
+  const moveDoc = async (id: string, status: DocStatus, beforeId: string | null = null) => {
     const cur = docs.find((x) => x.id === id);
-    if (!cur || docStatus(cur) === status) return;
-    const next = { ...cur, status, updated: Date.now() };
-    await idbPut("docs", next);
-    const ds = docs.map((x) => (x.id === id ? next : x));
-    rememberCache(`docs:${scope}`, ds);
-    setDocs(ds);
-    const label = STATUS_COLS.find((c) => c.id === status)?.label ?? status;
-    const msg = `RPD "${cur.name || cur.judul || "RPD"}" dipindahkan ke ${label}.`;
-    if (status === "done") toast.success(msg);
-    else if (status === "progress") toast.info(msg);
-    else toast.info(msg);
+    if (!cur) return;
+    if (beforeId !== null && beforeId === id) return; // lepas tepat pada dirinya — tidak berubah
+    const statusChanged = docStatus(cur) !== status;
+    const rest = docs.filter((x) => x.id !== id);
+    let at: number;
+    if (beforeId !== null) {
+      const ti = rest.findIndex((x) => x.id === beforeId);
+      at = ti < 0 ? rest.length : ti;
+    } else {
+      at = rest.length;
+      for (let i = rest.length - 1; i >= 0; i--) {
+        if (docStatus(rest[i]) === status) { at = i + 1; break; }
+      }
+    }
+    const moved: RpdDoc = { ...cur, status, updated: statusChanged ? Date.now() : cur.updated };
+    rest.splice(at, 0, moved);
+    const prev = new Map(docs.map((d) => [d.id, d]));
+    let wrote = 0;
+    for (const [i, d] of rest.entries()) {
+      const withOrd: RpdDoc = { ...d, ord: i };
+      const old = prev.get(d.id);
+      if (!old || old.ord !== withOrd.ord || old.status !== withOrd.status || old.updated !== withOrd.updated) {
+        await idbPut("docs", withOrd);
+        wrote++;
+      }
+      rest[i] = withOrd;
+    }
+    if (!wrote && !statusChanged) return;
+    rememberCache(`docs:${scope}`, rest);
+    setDocs(rest);
+    if (statusChanged) {
+      const label = STATUS_COLS.find((c) => c.id === status)?.label ?? status;
+      const msg = `RPD "${cur.name || cur.judul || "RPD"}" dipindahkan ke ${label}.`;
+      if (status === "done") toast.success(msg);
+      else toast.info(msg);
+    }
   };
 
   const doc = docs.find((d) => d.id === docId) ?? null;
@@ -248,7 +283,7 @@ export default function RpdView() {
       if (parsed.doc.scope !== scope) {
         if (!(await confirm({ title: "Impor ke scope berbeda?", description: `File ini untuk scope ${parsed.doc.scope}, sedangkan file aktif berscope ${scope}.`, confirmLabel: "Tetap impor" }))) return;
       }
-      await idbPut("docs", { ...parsed.doc, scope, updated: Date.now() });
+      await idbPut("docs", { ...parsed.doc, scope, updated: Date.now(), ord: -Date.now() });
       const lama = await idbAll<RpdEntry>("entries", scope);
       for (const e of lama.filter((x) => x.docId === parsed.doc.id)) await idbDel("entries", e.id);
       for (const e of parsed.entries) {
@@ -286,59 +321,106 @@ export default function RpdView() {
             return (
               <div
                 key={col.id}
-                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setOverCol(col.id);
+                  setOverCard(null);
+                }}
+                onDragLeave={(e) => {
+                  const related = e.relatedTarget;
+                  if (!(related instanceof Node) || !e.currentTarget.contains(related)) {
+                    setOverCol((c) => (c === col.id ? null : c));
+                    setOverCard(null);
+                  }
+                }}
                 onDrop={(e) => {
                   e.preventDefault();
                   const id = e.dataTransfer.getData("text/plain");
+                  setOverCol(null);
+                  setOverCard(null);
+                  setDragId(null);
                   if (id) void moveDoc(id, col.id);
                 }}
-                className="flex min-h-[calc(100svh-var(--header-h)-7rem)] flex-col gap-2 rounded-none border-2 bg-muted/40 p-2"
+                className={`flex min-h-[calc(100svh-var(--header-h)-7rem)] flex-col gap-2 rounded-none border-2 p-2 transition-colors ${overCol === col.id ? "border-primary bg-accent/60" : "bg-muted/40"}`}
               >
                 <div className="flex items-center gap-2 px-1 pt-1">
-                  <StatusBadge tone={col.tone}>{col.label}</StatusBadge>
+                  <StatusBadge tone={col.tone} symbol={col.id === "done"}>{col.label}</StatusBadge>
                   <span className="text-xs text-muted-foreground">{colDocs.length}</span>
                 </div>
-                {colDocs.map((d) => (
-                  <div
-                    key={d.id}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move"; }}
-                    className="rounded-none border-2 bg-card p-3 transition hover:border-primary/30"
-                  >
-                    <div className="flex items-start gap-2">
-                      <button
-                        type="button"
-                        onClick={() => { window.location.hash = `/rpd/${d.id}`; }}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <div className="truncate font-semibold">{d.name || d.judul || "RPD"}</div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                          Desa {d.desa || "-"} · Kecamatan {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
+                <ScrollArea viewportClassName="max-h-[calc(100svh-var(--header-h)-12rem)]">
+                  <div className="space-y-2">
+                    {colDocs.map((d, ci) => (
+                      <Fragment key={d.id}>
+                        {overCard?.id === d.id && overCard.pos === "before" && (
+                          <div className="h-[3px] bg-primary" aria-hidden="true" />
+                        )}
+                        <div
+                          draggable
+                          onDragStart={(e) => { e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move"; setDragId(d.id); }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = "move";
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setOverCard({ id: d.id, pos: e.clientY < rect.top + rect.height / 2 ? "before" : "after" });
+                            setOverCol(col.id);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = e.dataTransfer.getData("text/plain");
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const pos: "before" | "after" = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
+                            const beforeId = pos === "before" ? d.id : colDocs[ci + 1]?.id ?? null;
+                            setDragId(null);
+                            setOverCol(null);
+                            setOverCard(null);
+                            if (id) void moveDoc(id, col.id, beforeId);
+                          }}
+                          onDragEnd={() => { setDragId(null); setOverCol(null); setOverCard(null); }}
+                          className={`rounded-none border-2 bg-card p-3 transition hover:border-primary/30 cursor-grab active:cursor-grabbing ${dragId === d.id ? "-rotate-2 scale-[1.03] opacity-90 shadow-lg" : ""}`}
+                        >
+                      <div className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { window.location.hash = `/rpd/${d.id}`; }}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="truncate font-semibold">{d.name || d.judul || "RPD"}</div>
+                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                            Desa {d.desa || "-"} · Kecamatan {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
+                          </div>
+                        </button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                          title="Hapus RPD"
+                          aria-label="Hapus RPD"
+                          onClick={async () => {
+                            if (!(await confirm({ title: `Hapus RPD "${d.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
+                            const ents = await idbAll<RpdEntry>("entries", scope);
+                            for (const en of ents.filter((x) => x.docId === d.id)) await idbDel("entries", en.id);
+                            await idbDel("docs", d.id);
+                            await reload();
+                            toast.success(`Dokumen RPD "${d.name}" dihapus.`);
+                          }}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                      <div className="mt-2">
+                        <StatusBadge tone={col.tone} symbol={col.id === "done"}>{col.label}</StatusBadge>
+                      </div>
                         </div>
-                      </button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                        title="Hapus RPD"
-                        aria-label="Hapus RPD"
-                        onClick={async () => {
-                          if (!(await confirm({ title: `Hapus RPD "${d.name}"?`, description: "Seluruh rencananya ikut terhapus dan tidak bisa dibatalkan.", confirmLabel: "Hapus", tone: "destructive" }))) return;
-                          const ents = await idbAll<RpdEntry>("entries", scope);
-                          for (const en of ents.filter((x) => x.docId === d.id)) await idbDel("entries", en.id);
-                          await idbDel("docs", d.id);
-                          await reload();
-                          toast.success(`Dokumen RPD "${d.name}" dihapus.`);
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                    <div className="mt-2">
-                      <StatusBadge tone={col.tone}>{col.label}</StatusBadge>
-                    </div>
+                        {overCard?.id === d.id && overCard.pos === "after" && (
+                          <div className="h-[3px] bg-primary" aria-hidden="true" />
+                        )}
+                      </Fragment>
+                    ))}
                   </div>
-                ))}
+                </ScrollArea>
                 {!colDocs.length && (
                   <p className="rounded-none border-2 border-dashed p-4 text-center text-xs text-muted-foreground">
                     Belum ada — seret kartu ke sini
@@ -363,7 +445,7 @@ export default function RpdView() {
             <Button size="sm" variant="outline" onClick={() => { window.location.hash = "/rpd"; }}><ArrowLeft className="size-3.5" /> Daftar RPD</Button>
             <b>{doc?.name || "RPD"}</b>
             {doc && (
-              <StatusBadge tone={STATUS_COLS.find((c) => c.id === docStatus(doc))?.tone ?? "warning"}>
+              <StatusBadge tone={STATUS_COLS.find((c) => c.id === docStatus(doc))?.tone ?? "warning"} symbol={docStatus(doc) === "done"}>
                 {STATUS_COLS.find((c) => c.id === docStatus(doc))?.label ?? "Draf"}
               </StatusBadge>
             )}
@@ -372,7 +454,7 @@ export default function RpdView() {
               value={doc ? docStatus(doc) : "draft"}
               aria-label="Ubah status"
               disabled={!doc}
-              onChange={(e) => { if (doc) void moveDoc(doc.id, e.target.value as DocStatus); }}
+              onChange={(e) => { const v = e.target.value as DocStatus; if (doc && v !== docStatus(doc)) void moveDoc(doc.id, v); }}
             >
               {STATUS_COLS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
@@ -473,6 +555,7 @@ export default function RpdView() {
                 value={keg}
                 onChange={(v) => { setKeg(v); setRinc(""); }}
                 placeholder="Cari & pilih kegiatan…"
+                className="h-9"
               />
             </label>
             <label className="block space-y-1 text-xs font-medium">
@@ -483,6 +566,7 @@ export default function RpdView() {
                 onChange={(v) => setRinc(v)}
                 placeholder={keg ? "Cari & pilih rincian…" : "Pilih kegiatan dulu…"}
                 disabled={!keg}
+                className="h-9"
               />
             </label>
             <div className="relative">
@@ -491,84 +575,88 @@ export default function RpdView() {
             </div>
           </div>
         </div>
-        <CardContent className="space-y-2 p-3">
-          {!keg && (
-            <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-none border-2 border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
-              <div className="text-2xl">🧭</div>
-              <div className="mt-1 font-medium">Mulai dengan memilih kegiatan di atas</div>
-              <div className="text-xs">Gunakan kolom pencarian untuk menemukan kegiatan dengan cepat</div>
-            </button>
-          )}
-          {keg && !rinc && <p className="rounded-none border-2 border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
-          {visible.map((it) => {
-            const used = usedOf(it.key);
-            const sisaVol = Math.max(0, it.vol - used.vol);
-            const sisaAmt = Math.max(0, it.amt - used.amt);
-            const vol = Number(vols[it.key]) || 0;
-            const terisi = vol > 0;
-            const over = vol > sisaVol + 1e-9;
-            const amtKini = amtOf(it);
-            const overAmt = terisi && amtKini > sisaAmt + 1;
-            return (
-              <div key={it.key} className={`rounded-none border-2 p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5" : "hover:border-primary/30"}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{it.r.Uraian}</div>
-                    <div className="truncate text-xs text-muted-foreground">{it.kegKd} · {it.r.Kd_Rincian || ""}</div>
+        <CardContent className="p-3">
+          <ScrollArea viewportClassName="max-h-[65svh]">
+            <div className="space-y-2">
+              {!keg && (
+                <button type="button" onClick={() => document.querySelector<HTMLElement>("[data-keg-combo]")?.click()} className="w-full rounded-none border-2 border-dashed p-6 text-center text-sm text-muted-foreground transition hover:border-primary/50 hover:bg-primary/5">
+                  <div className="text-2xl">🧭</div>
+                  <div className="mt-1 font-medium">Mulai dengan memilih kegiatan di atas</div>
+                  <div className="text-xs">Gunakan kolom pencarian untuk menemukan kegiatan dengan cepat</div>
+                </button>
+              )}
+              {keg && !rinc && <p className="rounded-none border-2 border-dashed p-4 text-center text-sm text-muted-foreground">Pilih rincian kegiatan untuk melihat item belanja.</p>}
+              {visible.map((it) => {
+                const used = usedOf(it.key);
+                const sisaVol = Math.max(0, it.vol - used.vol);
+                const sisaAmt = Math.max(0, it.amt - used.amt);
+                const vol = Number(vols[it.key]) || 0;
+                const terisi = vol > 0;
+                const over = vol > sisaVol + 1e-9;
+                const amtKini = amtOf(it);
+                const overAmt = terisi && amtKini > sisaAmt + 1;
+                return (
+                  <div key={it.key} className={`rounded-none border-2 p-3 text-sm transition ${terisi ? "border-primary/60 bg-primary/5" : "hover:border-primary/30"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{it.r.Uraian}</div>
+                        <div className="truncate text-xs text-muted-foreground">{it.kegKd} · {it.r.Kd_Rincian || ""}</div>
+                      </div>
+                      <DanaBadge value={it.r.SumberDana} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                      <StatChip label="Harga" value={rp(it.price)} />
+                      <StatChip label="Vol RAB" value={`${nfInt0(it.vol)} ${it.r.Satuan || ""}`} />
+                      <StatChip label="Sisa vol" value={`${nfInt0(sisaVol)}`} tone={sisaVol <= 0 ? "habis" : undefined} />
+                      <StatChip label="Sisa Rp" value={rp(sisaAmt)} tone={sisaAmt <= 0 ? "habis" : undefined} />
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-none bg-muted/50 p-2">
+                      <label className="flex items-center gap-2 text-xs font-medium">Volume
+                        <Input className={`h-9 w-28 text-right font-semibold ${over ? "border-destructive" : ""}`} type="number" min={0} step="any" placeholder="0" value={vols[it.key] ?? ""} onChange={(e) => setVols({ ...vols, [it.key]: e.target.value })} />
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-medium">Jumlah (Rp)
+                        <Input className={`h-9 w-36 text-right font-semibold ${overAmt ? "border-destructive" : ""}`} inputMode="decimal" placeholder={rp(vol * it.price)} value={amts[it.key] ?? ""} onChange={(e) => setAmts({ ...amts, [it.key]: e.target.value })} />
+                      </label>
+                      <span className="text-xs text-muted-foreground">otomatis ≈ {rp(vol * it.price)}</span>
+                      {terisi && !over && !overAmt && <span className="text-xs text-success">✓ siap ditambahkan</span>}
+                      {over && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {nfInt0(sisaVol)}</span>}
+                      {overAmt && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {rp(sisaAmt)}</span>}
+                    </div>
                   </div>
-                  <DanaBadge value={it.r.SumberDana} />
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                  <StatChip label="Harga" value={rp(it.price)} />
-                  <StatChip label="Vol RAB" value={`${nfInt0(it.vol)} ${it.r.Satuan || ""}`} />
-                  <StatChip label="Sisa vol" value={`${nfInt0(sisaVol)}`} tone={sisaVol <= 0 ? "habis" : undefined} />
-                  <StatChip label="Sisa Rp" value={rp(sisaAmt)} tone={sisaAmt <= 0 ? "habis" : undefined} />
-                </div>
-                <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-none bg-muted/50 p-2">
-                  <label className="flex items-center gap-2 text-xs font-medium">Volume
-                    <Input className={`h-9 w-28 text-right font-semibold ${over ? "border-destructive" : ""}`} type="number" min={0} step="any" placeholder="0" value={vols[it.key] ?? ""} onChange={(e) => setVols({ ...vols, [it.key]: e.target.value })} />
-                  </label>
-                  <label className="flex items-center gap-2 text-xs font-medium">Jumlah (Rp)
-                    <Input className={`h-9 w-36 text-right font-semibold ${overAmt ? "border-destructive" : ""}`} inputMode="decimal" placeholder={rp(vol * it.price)} value={amts[it.key] ?? ""} onChange={(e) => setAmts({ ...amts, [it.key]: e.target.value })} />
-                  </label>
-                  <span className="text-xs text-muted-foreground">otomatis ≈ {rp(vol * it.price)}</span>
-                  {terisi && !over && !overAmt && <span className="text-xs text-success">✓ siap ditambahkan</span>}
-                  {over && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {nfInt0(sisaVol)}</span>}
-                  {overAmt && <span className="text-xs font-medium text-destructive">⚠ melebihi sisa {rp(sisaAmt)}</span>}
-                </div>
-              </div>
-            );
-          })}
-          {keg && rinc && !visible.length && <p className="text-sm text-muted-foreground">Tidak ada item yang cocok.</p>}
-          {(() => {
-            const adaLebih = visible.some((it) => {
-              const v = Number(vols[it.key]) || 0;
-              if (v <= 0) return false;
-              const used = usedOf(it.key);
-              return v > Math.max(0, it.vol - used.vol) + 1e-9 || amtOf(it) > Math.max(0, it.amt - used.amt) + 1;
-            });
-            const n = visible.filter((it) => (Number(vols[it.key]) || 0) > 0).length;
-            const tot = visible.reduce((s, it) => s + ((Number(vols[it.key]) || 0) > 0 ? amtOf(it) : 0), 0);
-            return (
-              <div className="sticky bottom-2 flex items-center justify-between gap-2 rounded-none border-2 bg-card p-2.5 shadow-lg">
-                <span className="text-xs text-muted-foreground">
-                  {n ? `${n} item · ${rp(tot)}${bulan === "" ? " · tanpa bulan" : ` · ${BLN[Number(bulan)]}`}` : "Belum ada volume diisi"}
-                  {adaLebih && " · ada yang melebihi sisa"}
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  {keg && (
-                    <Button
-                      variant="outline"
-                      onClick={() => { setKeg(""); setRinc(""); setVols({}); setAmts({}); setSearch(""); }}
-                    >
-                      Batal
-                    </Button>
-                  )}
-                  <Button onClick={addAll} disabled={!docId || !keg || !rinc || adaLebih}>Tambahkan ke rencana</Button>
-                </div>
-              </div>
-            );
-          })()}
+                );
+              })}
+              {keg && rinc && !visible.length && <p className="text-sm text-muted-foreground">Tidak ada item yang cocok.</p>}
+              {(() => {
+                const adaLebih = visible.some((it) => {
+                  const v = Number(vols[it.key]) || 0;
+                  if (v <= 0) return false;
+                  const used = usedOf(it.key);
+                  return v > Math.max(0, it.vol - used.vol) + 1e-9 || amtOf(it) > Math.max(0, it.amt - used.amt) + 1;
+                });
+                const n = visible.filter((it) => (Number(vols[it.key]) || 0) > 0).length;
+                const tot = visible.reduce((s, it) => s + ((Number(vols[it.key]) || 0) > 0 ? amtOf(it) : 0), 0);
+                return (
+                  <div className="sticky bottom-1 flex items-center justify-between gap-2 rounded-none border-2 bg-card p-2.5 shadow-md">
+                    <span className="text-xs text-muted-foreground">
+                      {n ? `${n} item · ${rp(tot)}${bulan === "" ? " · tanpa bulan" : ` · ${BLN[Number(bulan)]}`}` : "Belum ada volume diisi"}
+                      {adaLebih && " · ada yang melebihi sisa"}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {keg && (
+                        <Button
+                          variant="outline"
+                          onClick={() => { setKeg(""); setRinc(""); setVols({}); setAmts({}); setSearch(""); }}
+                        >
+                          Batal
+                        </Button>
+                      )}
+                      <Button onClick={addAll} disabled={!docId || !keg || !rinc || adaLebih}>Tambahkan ke rencana</Button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
@@ -874,6 +962,7 @@ function blankDoc(scope: string, flat: RabFlatRow[], tables: SmdTables | null): 
     id: newId("d"), scope, name: "RPD baru", judul: "RENCANA PENGGUNAAN DANA", desa: ident.desa, kecamatan: ident.kecamatan,
     tahun: ident.tahun, kades: ident.kades, kaur: ident.kaur, status: "draft",
     tanggal: new Date().toISOString().slice(0, 10), ts: Date.now(), updated: Date.now(),
+    ord: -Date.now(),
   };
 }
 

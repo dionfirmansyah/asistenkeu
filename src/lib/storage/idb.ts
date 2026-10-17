@@ -34,6 +34,8 @@ export interface RpdDoc {
   updated: number;
   /** Status kanban; dokumen lama tanpa field ini dianggap "draft". */
   status?: DocStatus;
+  /** Urutan manual kartu kanban (ditulis saat drag & drop); tanpa ini urutannya ikut `updated`. */
+  ord?: number;
 }
 
 export interface RpdEntry {

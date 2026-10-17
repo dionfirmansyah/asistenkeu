@@ -19,12 +19,12 @@ const TONE_SYMBOL: Record<StatusTone, string> = {
 };
 
 /** Lencana status: simbol + teks mono kapital, border sewarna teks. Status selalu disertai teks, bukan hanya warna. */
-export function StatusBadge({ tone, children }: { tone: StatusTone; children: ReactNode }) {
+export function StatusBadge({ tone, children, symbol = true }: { tone: StatusTone; children: ReactNode; symbol?: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-[2px] border border-current px-2 py-0.5 font-mono text-xs font-medium tracking-[0.06em] uppercase ${TONE_CLASS[tone]}`}
     >
-      <span aria-hidden="true">{TONE_SYMBOL[tone]}</span>
+      {symbol && <span aria-hidden="true">{TONE_SYMBOL[tone]}</span>}
       {children}
     </span>
   );
