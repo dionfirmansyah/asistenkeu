@@ -42,7 +42,10 @@ jobs:
           VITE_ROOT_FOLDER_ID: ${{ secrets.VITE_ROOT_FOLDER_ID }}
 
       - name: Configure Pages
+        # enablement: aktifkan Pages otomatis (source: GitHub Actions) bila repo belum punya site Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload artifact halaman
         uses: actions/upload-pages-artifact@v3
