@@ -1,0 +1,62 @@
+name: Build & Deploy (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Deploy ke Pages butuh izin OIDC; checkout cukup read.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (base /<nama-repo>/)
+        # SPA ini pakai hash routing (#/rpd), jadi tidak perlu file 404/rename khusus;
+        # cukup base sesuai nama repo agar aset di bawah https://<user>.github.io/<repo>/
+        run: npm run build -- --base=/${{ github.event.repository.name }}/
+        env:
+          # Nilai VITE_* dibundel saat build; lokal lewat .env.local, CI lewat repository secrets.
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_ROOT_FOLDER_ID: ${{ secrets.VITE_ROOT_FOLDER_ID }}
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact halaman
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy ke GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

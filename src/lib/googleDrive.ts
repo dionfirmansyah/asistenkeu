@@ -256,7 +256,7 @@ export function ensureGisLoaded(): Promise<void> {
 
 function clientId(): string {
   const id = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-  if (!id) throw new DriveError(0, "no_client_id", "VITE_GOOGLE_CLIENT_ID belum diisi di .env.local.");
+  if (!id) throw new DriveError(0, "no_client_id", "VITE_GOOGLE_CLIENT_ID belum tersedia. Isi di .env.local (lokal) atau sebagai Secret GitHub Actions.");
   return id;
 }
 

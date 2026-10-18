@@ -40,7 +40,7 @@ export function useDriveAuth(): DriveAuth {
   const verifyRoot = useCallback(async (): Promise<DriveItem> => {
     const id = rootFolderId();
     if (!id) {
-      throw new DriveError(0, "no_root_id", "VITE_ROOT_FOLDER_ID belum diisi di .env.local.");
+      throw new DriveError(0, "no_root_id", "VITE_ROOT_FOLDER_ID belum tersedia. Isi di .env.local (lokal) atau sebagai Secret GitHub Actions.");
     }
     const rootItem = await getItem(id);
     if (!isFolder(rootItem)) {
