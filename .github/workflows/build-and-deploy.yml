@@ -19,6 +19,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    # Job build perlu mendeklarasikan environment ini agar Environment secrets
+    # (VITE_GOOGLE_CLIENT_ID, VITE_ROOT_FOLDER_ID) tersedia saat build.
+    environment: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
