@@ -245,6 +245,9 @@
 .spp-tbl th:last-child, .spp-tbl td:last-child { border-right: 0; }
 .spp-tbl .n { text-align: right; }
 .spp-tbl .m { text-align: center; }
+/* Multi-row header baris 2 dan 3: hilangkan border atas agar gabung dengan baris 1 */
+.spp-tbl-head2 th { border-top: 0; }
+.spp-tbl-head3 th { border-top: 0; }
 .spp-tbl tr.spp-tot td { border-top: 1px solid #000; font-weight: 700; text-align: right; }
 .spp-tbl tr.spp-tot td:first-child, .spp-tbl tr.spp-tot td:nth-child(2) { border-right: 0; }
 
@@ -264,9 +267,23 @@
 .spp-in3 { padding: 8px 0 0 10mm; }
 .spp-in3 .spp-kv { grid-template-columns: 24mm 6mm 1fr; padding: 4px 0; }
 
+/* Tabel SPTJB */
+.spp-t3 { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }
+.spp-t3 th { padding: 4px 5px; font-weight: 700; text-align: center; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+.spp-t3 td { padding: 5px; vertical-align: top; border-left: 1px solid #000; border-right: 1px solid #000; }
+.spp-t3 tr:first-child th { border-top: 0; }
+.spp-t3 th:first-child, .spp-t3 td:first-child { border-left: 0; }
+.spp-t3 th:last-child, .spp-t3 td:last-child { border-right: 0; }
+.spp-t3 .n { text-align: right; }
+.spp-t3 .m { text-align: center; }
+.spp-t3 tr.spp-tot td { border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: 700; text-align: right; }
+.spp-t3 tr.spp-tot td:last-child { border-left: 1px solid #000; }
+.spp-t3 tr.spp-tot td:first-child { text-align: center; }
+
 .spp-stmt { padding: 10px 8px 8px; line-height: 2; }
 .spp-stmt .spp-ttd1 { margin-top: 6px; }
 
+/* Footer halaman */
 .spp-foot { position: absolute; left: 18mm; right: 18mm; bottom: 11mm; display: flex; align-items: center; gap: 12px; padding-top: 3px; border-top: 1px solid #000; font-size: 7pt; }
 .spp-sheet.land .spp-foot { left: 17mm; right: 17mm; }
 .spp-foot .spp-tag { background: #000; color: #fff; padding: 1px 14px 1px 12px; }

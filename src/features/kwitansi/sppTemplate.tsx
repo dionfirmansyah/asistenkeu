@@ -13,12 +13,13 @@ const ddmmyyyy = (iso?: string): string => {
   return `${m[3]}${m[2]}${m[1]}`;
 };
 
-const foot = (waktu?: string): string =>
-  `<div class="spp-foot"><span class="spp-tag">Printed by Siskeudes</span><span>${e(waktu ?? "-")}</span><span class="spp-pg">Halaman 1</span></div>`;
+const foot = (waktu?: string, halaman = 1): string =>
+  `<div class="spp-foot"><span class="spp-tag">Printed by Siskeudes</span><span>${e(waktu ?? "-")}</span><span class="spp-pg">Halaman ${halaman}</span></div>`;
 
-const head = (desa?: string, tahun?: number): string => {
+const head = (desa?: string, tahun?: number, judul?: string): string => {
   const d = e(desa ?? "-");
-  return `<div class="spp-hd"><div class="spp-a">PEMERINTAH DESA ${d}</div><div class="spp-b">SURAT PERMINTAAN PEMBAYARAN</div><div class="spp-a">TAHUN ANGGARAN ${tahun ?? "-"}</div></div>`;
+  const j = e(judul ?? "SURAT PERMINTAAN PEMBAYARAN");
+  return `<div class="spp-hd"><div class="spp-a">PEMERINTAH DESA ${d}</div><div class="spp-b">${j}</div><div class="spp-a">TAHUN ANGGARAN ${tahun ?? "-"}</div></div>`;
 };
 
 export type SppTemplate = "spp-1" | "spp-2" | "sptjb" | "semua";
@@ -57,8 +58,8 @@ export function SppSheet1({ d, kwitansi }: SheetProps): React.JSX.Element {
         <div className="spp-kv"><span>e.&nbsp; Keperluan</span><span>:</span><span>{e(d.keperluan ?? "-")}</span></div>
         <div className="spp-kv"><span>f.&nbsp; Jumlah Diminta</span><span>:</span><span>Rp.<span className="spp-amt">{rup(jumlah)}</span><span className="spp-terb">( {terbilang(jumlah)} Rupiah)</span></span></div>
       </div>
-      <div className="spp-ttd1"> &nbsp;{tglDikeluarkan}<br />Pelaksana Kegiatan,<div className="spp-gap"></div>{e(d.pelaksana ?? "-")}</div>
-      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.spp1) }} />
+      <div className="spp-ttd1">{d.desa}, &nbsp;{tglDikeluarkan}<br />Pelaksana Kegiatan,<div className="spp-gap"></div>{e(d.pelaksana ?? "-")}</div>
+      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.spp1, 1) }} />
     </section>
   );
 }
@@ -77,7 +78,7 @@ export function SppSheet2({ d }: { d: SppTemplateData }): React.JSX.Element {
     jml: rows.reduce((s, r) => s + r.jml, 0),
     sisa: rows.reduce((s, r) => s + r.sisa, 0),
   };
-  const ttd = (d.ttd ?? []).map((t) => `<div class="spp-ttd-row"><div>${e(t.aksi)}</div><div class="spp-jab">${e(t.jabatan)}</div><div class="spp-gap"></div><div>${e(t.nama)}</div></div>`).join("");
+  const ttdHtml = (d.ttd ?? []).map((t) => `<div class="spp-ttd-row"><div>${e(t.aksi)}</div><div class="spp-jab">${e(t.jabatan)}</div><div class="spp-gap"></div><div>${e(t.nama)}</div></div>`).join("");
   return (
     <section className="spp-sheet land">
       <div dangerouslySetInnerHTML={{ __html: head(d.desa, d.tahun) }} />
@@ -93,7 +94,7 @@ export function SppSheet2({ d }: { d: SppTemplateData }): React.JSX.Element {
           <colgroup>
             <col style={{ width: "5%" }} /><col style={{ width: "9%" }} /><col style={{ width: "33%" }} /><col style={{ width: "10.6%" }} /><col style={{ width: "10.6%" }} /><col style={{ width: "10.6%" }} /><col style={{ width: "10.6%" }} /><col style={{ width: "10.6%" }} />
           </colgroup>
-          <tr>
+          <tr className="spp-tbl-head1">
             <th rowSpan={2}>No.</th>
             <th rowSpan={2}>Kode</th>
             <th rowSpan={2}>Uraian</th>
@@ -103,14 +104,14 @@ export function SppSheet2({ d }: { d: SppTemplateData }): React.JSX.Element {
             <th>Jumlah Sampai<br />Saat Ini</th>
             <th>Sisa Dana</th>
           </tr>
-          <tr>
+          <tr className="spp-tbl-head2">
             <th>( Rp )</th>
             <th>( Rp )</th>
             <th>( Rp )</th>
             <th>( Rp )</th>
             <th>( Rp )</th>
           </tr>
-          <tr>
+          <tr className="spp-tbl-head3">
             <th>1</th>
             <th>2</th>
             <th>3</th>
@@ -134,12 +135,12 @@ export function SppSheet2({ d }: { d: SppTemplateData }): React.JSX.Element {
         </table>
         <div className="spp-sg">
           <div className="spp-tgl">{d.desa}, &nbsp;{d.tanggal ?? "-"}</div>
-          <div className="spp-row">{ttd}
+          <div className="spp-row">{ttdHtml}
             <div><div>Pelaksana Kegiatan,</div><div className="spp-jab"></div><div className="spp-gap"></div><div>{e(d.pelaksana ?? "-")}</div></div>
           </div>
         </div>
       </div>
-      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.spp2) }} />
+      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.spp2, 2) }} />
     </section>
   );
 }
@@ -152,11 +153,10 @@ export function SppSheet3({ d }: { d: SppTemplateData }): React.JSX.Element {
       `<tr><td class="spp-m">${i + 1}</td><td>${e(p.nama)}<br />${e(p.alamat)}<small>${e(p.bukti)}</small></td><td>${e(p.uraian)}</td><td style="vertical-align:bottom">${e(p.rekening)}</td><td class="spp-n">${rup(p.jumlah)}</td></tr>`,
   ).join("");
   const total = rows.reduce((s, p) => s + p.jumlah, 0);
-  const headHtml = head(d.desa, d.tahun).replace("SURAT PERMINTAAN PEMBAYARAN", "PERNYATAAN TANGGUNG JAWAB BELANJA");
   return (
     <section className="spp-sheet">
       <div className="spp-top3"><span className="spp-nomor">Nomor &nbsp;: &nbsp;{e(d.nomor ?? "-")}</span></div>
-      <div dangerouslySetInnerHTML={{ __html: headHtml }} />
+      <div dangerouslySetInnerHTML={{ __html: head(d.desa, d.tahun, "PERNYATAAN TANGGUNG JAWAB BELANJA") }} />
       <div className="spp-box">
         <div className="spp-in3">
           <div className="spp-kv"><span>1. Bidang</span><span>:</span><span>{e(d.bidang ?? "-")}</span></div>
@@ -185,7 +185,7 @@ export function SppSheet3({ d }: { d: SppTemplateData }): React.JSX.Element {
           <div className="spp-ttd1">{d.desa}, &nbsp;{d.tanggal ?? "-"}<br />Pelaksana Kegiatan,<div className="spp-gap"></div>{e(d.pelaksana ?? "-")}</div>
         </div>
       </div>
-      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.sptjb) }} />
+      <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.sptjb, 3) }} />
     </section>
   );
 }
