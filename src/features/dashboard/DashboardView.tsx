@@ -62,16 +62,15 @@ export default function DashboardView() {
         <div className="border-b bg-muted/40 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold">Desa {ident.desa || "-"}</h1>
-              <p className="text-sm text-muted-foreground">Kecamatan {ident.kecamatan || "-"} · Tahun Anggaran {ident.tahun || "-"}{ident.statusIdm ? ` · Status IDM: ${ident.statusIdm}` : ""}</p>
+              <h1 className="text-xl font-bold">DESA {ident.desa || "-"}</h1>
+              <p className="text-sm text-muted-foreground"> {ident.kecamatan || "-"} · Tahun Anggaran {ident.tahun || "-"}{ident.statusIdm ? ` · Status IDM: ${ident.statusIdm}` : ""}</p>
             </div>
             <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-xs font-medium uppercase tracking-[0.06em] text-accent-foreground">{flat.length.toLocaleString("id-ID")} baris RAB</span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-3">
             <div className="rounded-md border bg-card/60 p-2"><div className="text-muted-foreground">Kepala Desa</div><b>{ident.kades || "-"}</b></div>
             <div className="rounded-md border bg-card/60 p-2"><div className="text-muted-foreground">Sekretaris Desa</div><b>{ident.sekdes || "-"}</b></div>
             <div className="rounded-md border bg-card/60 p-2"><div className="text-muted-foreground">Kaur Keuangan</div><b>{ident.kaur || "-"}</b></div>
-            <div className="rounded-md border bg-card/60 p-2"><div className="text-muted-foreground">Bendahara Desa</div><b>{ident.bendahara || "-"}</b></div>
           </div>
         </div>
       </Card>
@@ -279,13 +278,12 @@ export default function DashboardView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted text-left">
-                <th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Semula</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Perubahan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Menjadi</th>
+<th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian Belanja</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Semula</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Perubahan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Menjadi</th>
               </tr>
             </thead>
             <tbody>
               {top.map((r) => (
                 <tr key={r._id} className="border-t hover:bg-primary/5">
-                  <td className="h-11 px-3">{r.Nama_Kegiatan}</td>
                   <td className="h-11 px-3">{r.Nama_Rincian_Label} {r.Asal === "SILPA" && <Badge variant="secondary">SiLPA</Badge>}</td>
                   <td className="num h-11 px-3">{rp(r.Anggaran)}</td>
                   <td className="num h-11 px-3">{rpS(r.AnggaranPAK)}</td>
@@ -347,7 +345,7 @@ function GroupTable({ rows, field, basis }: { rows: Parameters<typeof aggregate>
       <thead><tr className="bg-muted text-left"><th scope="col" className="h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">{field === "SumberDana" ? "Sumber dana" : "PPTKD"}</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Rincian</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Kegiatan</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">Total</th><th scope="col" className="num h-10 px-3 font-mono text-xs font-medium uppercase tracking-[0.06em]">%</th></tr></thead>
       <tbody>
         {agg.map((x) => (
-          <tr key={x.name} className="border-t hover:bg-primary/5">
+          <tr key={x.name} className="border-t hover:bg-primary/5 text-xs">
             <td className="h-11 px-3">{field === "SumberDana" ? <DanaBadge value={x.name} /> : x.name}</td>
             <td className="num h-11 px-3">{nfInt0(x.nRincian)}</td>
             <td className="num h-11 px-3">{nfInt0(x.nKeg)}</td>
@@ -355,7 +353,7 @@ function GroupTable({ rows, field, basis }: { rows: Parameters<typeof aggregate>
             <td className="num h-11 px-3">{tot ? Math.round((Math.abs(x.total) / Math.abs(tot)) * 100) : 0}%</td>
           </tr>
         ))}
-        <tr className="border-t bg-muted font-semibold"><td className="h-11 px-3">Total</td><td className="num h-11 px-3"></td><td className="num h-11 px-3"></td><td className="num h-11 px-3">{rp(tot)}</td><td className="num h-11 px-3">100%</td></tr>
+        <tr className="border-t bg-muted font-semibold text-xs"><td className="h-11 px-3">Total</td><td className="num h-11 px-3"></td><td className="num h-11 px-3"></td><td className="num h-11 px-3">{rp(tot)}</td><td className="num h-11 px-3">100%</td></tr>
       </tbody>
     </table>
     </div>

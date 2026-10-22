@@ -3,8 +3,6 @@ import { useSmdStore } from "@/stores/smd-store";
 import { useFiltersStore, applyFilters, cascadeOptions, FILTERS, type FilterField } from "@/stores/filters-store";
 import { rp, rpS } from "@/lib/engine/format";
 import { groupBy } from "@/lib/engine/util";
-import { toCSV, download, copyText } from "@/lib/csv";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,12 +11,6 @@ import { Input } from "@/components/ui/input";
 import type { Basis } from "@/stores/smd-store";
 import type { RabFlatRow } from "@/types/smd";
 
-const FLAT_MIN: [string, string][] = [
-  ["Jenis", "Jenis"], ["Kd_Bid", "Kode Bidang"], ["Nama_Bidang", "Bidang"], ["Kd_Keg", "Kode Kegiatan"], ["Nama_Kegiatan", "Nama Kegiatan"],
-  ["Nama_Rincian", "Nama Rincian"], ["No_Urut", "No"], ["Uraian", "Uraian"], ["SumberDana", "Sumber Dana"], ["Nm_PPTKD", "PPTKD"],
-  ["JmlSatuanPAK", "Volume"], ["Satuan", "Satuan"], ["HrgSatuanPAK", "Harga Satuan"], ["Anggaran", "Semula"], ["AnggaranPAK", "Perubahan"], ["AnggaranStlhPAK", "Menjadi"],
-];
-
 const BASIS_LABEL: Record<Basis, string> = {
   Anggaran: "Semula",
   AnggaranStlhPAK: "Menjadi",
@@ -26,6 +18,15 @@ const BASIS_LABEL: Record<Basis, string> = {
 };
 
 const sortKey = (a: [string, RabFlatRow[]], b: [string, RabFlatRow[]]) => a[0].localeCompare(b[0], "id", { numeric: true });
+
+/** Tampilkan segmen akhir kode rekening (mis. 04.2005.01 → 01). n = jumlah segmen dari belakang, bagian kosong diabaikan. */
+const lastSegment = (code: string | undefined | null, n = 1) => {
+  if (code == null || code === "") return "-";
+  const parts = String(code).split(".").filter((p) => p.length > 0);
+  if (parts.length === 0) return "-";
+  if (parts.length <= n) return parts.join(".");
+  return parts.slice(parts.length - n).join(".");
+};
 
 const sum = (rows: RabFlatRow[], f: (r: RabFlatRow) => number) => rows.reduce((s, r) => s + f(r), 0);
 
@@ -42,7 +43,7 @@ const HIER_DEPTH: { field: FilterField; depth: number }[] = [
 ];
 
 export default function StrukturView() {
-  const { flat, basis, setBasis, fileName } = useSmdStore();
+  const { flat, basis, setBasis } = useSmdStore();
   const { values, q, set, reset } = useFiltersStore();
   const [search, setSearch] = useState("");
   const rows = useMemo(() => {
@@ -59,7 +60,6 @@ export default function StrukturView() {
     }
     return r;
   }, [flat, values, q, search]);
-  const [copied, setCopied] = useState(false);
   const searching = search.trim() !== "";
   const keywordActive = searching || q.trim() !== "";
   const openDepth = useMemo(() => {
@@ -153,17 +153,17 @@ export default function StrukturView() {
             [...groupBy(jrows.filter((r) => !r.Pseudo), (r) => `${r.Kd_Bid}|${r.Nama_Bidang}`)].sort(sortKey).map(([bk, br]) => {
               const [bc, bn] = bk.split("|");
               return (
-                <Node key={bk} title={`${bc} — ${bn}`} amt={sum(br, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 2}>
+                <Node key={bk} title={`${lastSegment(bc, 1)} — ${bn}`} amt={sum(br, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 2}>
                   {[...groupBy(br, (r) => `${r.Kd_Sub}|${r.Nama_SubBidang}`)].sort(sortKey).map(([sk, sr]) => {
                     const [sc, sn] = sk.split("|");
                     return (
-                      <Node key={sk} title={`${sc} — ${sn}`} amt={sum(sr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 3}>
+                      <Node key={sk} title={`${lastSegment(bc, 1)}.${lastSegment(sc, 1)} — ${sn}`} amt={sum(sr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 3}>
                         {[...groupBy(sr, (r) => r.Kd_Keg)].sort(sortKey).map(([kk, kr]) => (
-                          <Node key={kk} title={`${kr[0].ID_Keg || kk} — ${kr[0].Nama_Kegiatan}`} amt={sum(kr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 4}>
+                          <Node key={kk} title={`${kr[0].ID_Keg || lastSegment(kk)} — ${kr[0].Nama_Kegiatan}`} amt={sum(kr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 4}>
                             {[...groupBy(kr, (r) => `${r.Kd_SubRinci}|${r.Nama_Rincian}`)].sort(sortKey).map(([rk, rr]) => {
                               const [rc, rn] = rk.split("|");
                               return (
-                                <Node key={rk} title={`${rc} — ${rn}`} amt={sum(rr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 5}>
+                                <Node key={rk} title={`${lastSegment(rc)} — ${rn}`} amt={sum(rr, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 5}>
                                   {rr.map((r) => <ItemRow key={r._id} r={r} basis={basis} forceOpen={keywordActive} />)}
                                 </Node>
                               );
@@ -206,7 +206,7 @@ function ItemRow({ r, basis, forceOpen }: { r: RabFlatRow; basis: Basis; forceOp
       <summary className="flex cursor-pointer items-center justify-between px-3 py-1.5 text-xs">
         <span>
           {r.Pseudo ? (
-            <><b>{r.Kd_Rincian}</b> {r.Uraian || r.Nama_Rincian_Label}</>
+            <><b>{lastSegment(r.Kd_Rincian)}</b> {r.Uraian || r.Nama_Rincian_Label}</>
           ) : (
             <><b>{r.No_Urut}.</b> {r.Uraian}</>
           )}

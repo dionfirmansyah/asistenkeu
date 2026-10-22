@@ -8,6 +8,14 @@ import { KwitansiPengeluaran } from "./KwitansiPengeluaran";
 import type { KwitansiData } from "./types";
 import "./kwitansi.css";
 
+type CetakTemplate = "spp-1" | "spp-2" | "sptjb";
+
+const TEMPLATE_LABEL: Record<CetakTemplate, string> = {
+  "spp-1": "SPP-1",
+  "spp-2": "SPP-2",
+  sptjb: "SPTJB",
+};
+
 const hariIni = () => {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -49,6 +57,7 @@ export function PratinjauCetak({
   const [ppn, setPpn] = useState(pertama?.potongan.ppn ?? 0);
   const [pph, setPph] = useState(pertama?.potongan.pph ?? 0);
   const [lainnya, setLainnya] = useState(pertama?.potongan.lainnya ?? 0);
+  const [template, setTemplate] = useState<CetakTemplate>("spp-1");
 
   if (!pertama) return null;
 
@@ -59,7 +68,8 @@ export function PratinjauCetak({
     dicetakPada: `${tgl}T${jam.length === 5 ? jam + ":00" : jam}`,
   });
   const data = terapkan(pertama);
-  const bayar = dibayarkan(data);
+  const semua = banyak ? banyak.map(terapkan) : [data];
+  const totalBayar = semua.reduce((s, d) => s + dibayarkan(d), 0);
 
   const cetak = () => {
     if (banyak && onCetakBanyak) onCetakBanyak(banyak.map(terapkan));
@@ -73,6 +83,21 @@ export function PratinjauCetak({
           <DialogTitle>
             {banyak ? `Cetak ${banyak.length} kwitansi` : `Cetak kwitansi ${pertama.nomor}`}
           </DialogTitle>
+          <div className="flex gap-1 mt-1">
+            {(["spp-1", "spp-2", "sptjb"] as CetakTemplate[]).map((t) => (
+              <Button
+                key={t}
+                size="sm"
+                variant={template === t ? "default" : "outline"}
+                className="text-xs"
+                onClick={() => setTemplate(t)}
+                disabled={t !== "spp-1"}
+                title={t === "spp-1" ? "Template SPP-1 (aktif)" : "Menunggu contoh PDF"}
+              >
+                {TEMPLATE_LABEL[t]}
+              </Button>
+            ))}
+          </div>
         </DialogHeader>
         <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
           <div className="space-y-3">
@@ -94,8 +119,8 @@ export function PratinjauCetak({
               <label className="block text-xs">Lainnya<MoneyInput className="mt-1 h-8 text-xs" value={lainnya} onChange={setLainnya} /></label>
             </div>
             <div className="rounded-md border p-2 text-xs">
-              <div>Dibayarkan: <b>{rupiah(bayar)}</b></div>
-              <div className="mt-1 text-muted-foreground">== {pertama.terbilang?.trim() || terbilang(pertama.jumlah)} ==</div>
+              <div>Dibayarkan: <b>{rupiah(totalBayar)}</b></div>
+              {!banyak && <div className="mt-1 text-muted-foreground">== {pertama.terbilang?.trim() || terbilang(pertama.jumlah)} ==</div>}
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
@@ -103,11 +128,26 @@ export function PratinjauCetak({
             </div>
           </div>
           <div className="kwt-pratinjau rounded-md border">
-            <KwitansiPengeluaran data={data} />
-            {banyak && banyak.length > 1 && (
-              <p className="p-2 text-xs text-muted-foreground">
-                + {banyak.length - 1} kwitansi lain ({banyak.slice(1).map((d) => d.nomor).join(", ")}) ikut tercetak dengan tanggal, jam, kabupaten, dan potongan yang sama.
-              </p>
+            {template === "spp-1" ? (
+              banyak ? (
+                <>
+                  {banyak.map((d) => (
+                    <div key={d.nomor} className="mb-2">
+                      <KwitansiPengeluaran data={terapkan(d)} tampilkanPenandaCetak={false} />
+                    </div>
+                  ))}
+                  <p className="p-2 text-xs text-muted-foreground border-t pt-2">
+                    Total {banyak.length} kwitansi · Rp <b className="tabular-nums">{rupiah(totalBayar)}</b>
+                  </p>
+                </>
+              ) : (
+                <KwitansiPengeluaran data={data} />
+              )
+            ) : (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                <p>Template <b>{TEMPLATE_LABEL[template]}</b> belum tersedia.</p>
+                <p className="mt-1">Silakan kirim contoh PDF SPP-{template === "spp-2" ? "2" : "TJB"} agar dapat disesuaikan.</p>
+              </div>
             )}
           </div>
         </div>
