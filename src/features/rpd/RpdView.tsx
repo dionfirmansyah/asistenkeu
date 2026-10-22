@@ -307,10 +307,10 @@ export default function RpdView() {
       {confirmNode}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Rencana penggunaan</h2>
+            <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Rencana penggunaan Dana</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">Dokumen rencana penggunaan dana per kegiatan.</p>
           </div>
-          <Button size="sm" onClick={() => setModal("new")}>RPD baru</Button>
+          <Button size="sm" onClick={() => setModal("new")}><Plus/> RPD baru</Button>
         </div>
         {!docs.length && (
           <p className="text-sm text-muted-foreground">Belum ada RPD. Klik <b>RPD Baru</b> untuk membuat dokumen rencana penggunaan dana.</p>
@@ -389,7 +389,7 @@ export default function RpdView() {
                         >
                           <div className="truncate font-semibold">{d.name || d.judul || "RPD"}</div>
                           <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                            Desa {d.desa || "-"} · Kecamatan {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
+                            Desa {d.desa || "-"} · {d.kecamatan || "-"} · Tahun {d.tahun || "-"}
                           </div>
                         </button>
                         <Button
@@ -1000,7 +1000,7 @@ function RpdDocForm({ initial, onSave }: { initial: RpdDoc; onSave: (d: RpdDoc) 
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="block text-xs">Desa<Input className="mt-1" value={d.desa} onChange={(e) => set("desa", e.target.value)} /></label>
-        <label className="block text-xs">Kecamatan<Input className="mt-1" value={d.kecamatan} onChange={(e) => set("kecamatan", e.target.value)} /></label>
+        <label className="block text-xs"><Input className="mt-1" value={d.kecamatan} onChange={(e) => set("kecamatan", e.target.value)} /></label>
         <label className="block text-xs">Tahun<Input className="mt-1" value={d.tahun} onChange={(e) => set("tahun", e.target.value)} /></label>
         <label className="block text-xs">Tanggal<Input className="mt-1" type="date" value={d.tanggal} onChange={(e) => set("tanggal", e.target.value)} /></label>
         <label className="block text-xs">Kepala Desa<Input className="mt-1" value={d.kades} onChange={(e) => set("kades", e.target.value)} /></label>

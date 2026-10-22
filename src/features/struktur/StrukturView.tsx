@@ -78,11 +78,11 @@ export default function StrukturView() {
     return [...m.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
   }, [rows]);
 
-  const exportCsv = () => {
-    const base = (fileName ?? "rab").replace(/\.[^.]+$/, "");
-    download(`${base}_rab_flat.csv`, toCSV(FLAT_MIN, rows));
-    toast.success("Berkas CSV terunduh.");
-  };
+
+  const handleReset = () => {
+  reset();
+  setSearch("");
+};
 
   return (
     <div className="space-y-4">
@@ -92,7 +92,17 @@ export default function StrukturView() {
       </div>
       {/* Filter — sama seperti Dashboard, satu store bersama */}
       <Card>
-        <CardContent className="grid grid-cols-2 gap-3 p-4">
+     <div className="px-4">
+
+               <Input
+            className="h-8 w-full text-xs"
+            placeholder="Cari di pohon RAB… (kegiatan, uraian, sumber dana)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+       
+     </div>
+        <CardContent className="grid grid-cols-2 gap-3">
           {STRUKTUR_FILTERS.map((F) => {
             const opts = cascadeOptions(flat, values, F.id);
             return (
@@ -128,29 +138,14 @@ export default function StrukturView() {
                 </Button>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={reset}>Reset</Button>
+<Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleReset}>
+  Reset
+</Button>
+
           </div>
         </div>
       </Card>
       <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Basis {BASIS_LABEL[basis]}. {rows.length.toLocaleString("id-ID")} item (mengikuti filter di atas).
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            className="h-8 w-72 text-xs"
-            placeholder="Cari di pohon RAB… (kegiatan, uraian, sumber dana)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button size="sm" variant="outline" onClick={async () => { const ok = await copyText(toCSV(FLAT_MIN, rows)); setCopied(ok); setTimeout(() => setCopied(false), 1400); if (ok) toast.success("CSV disalin ke clipboard."); else toast.error("Gagal menyalin.", { duration: Infinity }); }}>
-            {copied ? "Tersalin" : "Salin CSV"}
-          </Button>
-          <Button size="sm" variant="outline" onClick={exportCsv}>Unduh CSV</Button>
-        </div>
-      </div>
-
       {byJenis.map(([jenis, jrows]) => (
         <Node key={jenis} title={jenis} amt={sum(jrows, (r) => Number(r[basis]) || 0)} forceOpen={openDepth >= 1}>
           {jenis === "BELANJA" ? (
