@@ -191,3 +191,93 @@
   #kwt-print-root .kwt-halaman { margin: 0; box-shadow: none; }
   #kwt-print-root .kwt-negatif { display: none !important; }
 }
+
+/* ============ Template SPP (SPP-1 / SPP-2 / SPTJB / SEMUA) ============ */
+.spp-sheet {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  margin: 8mm auto 8mm auto;
+  padding: 14mm 18mm;
+  background: #fff;
+  color: #000;
+  font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+  font-size: 8.5pt;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
+  overflow: hidden;
+  break-after: page;
+}
+.spp-sheet.land {
+  width: 297mm;
+  height: 210mm;
+  padding: 13mm 17mm;
+  page: land;
+}
+@page land { size: A4 landscape; margin: 0; }
+
+.spp-hd { text-align: center; font-weight: 700; line-height: 1.8; }
+.spp-hd .spp-a { font-size: 8.5pt; }
+.spp-hd .spp-b { font-size: 10pt; }
+.spp-rule { border: 0; border-top: 4px solid #000; margin: 8px 0 14px; }
+.spp-c { text-align: center; font-weight: 700; line-height: 2; }
+.spp-kepada { margin: 22px 0 26px; line-height: 1.9; }
+.spp-kepada div:last-child { padding-left: 4mm; }
+.spp-para { line-height: 2.1; }
+.spp-k1 { margin-left: 12mm; }
+.spp-kv { display: grid; grid-template-columns: 30mm 5mm 1fr; padding: 5px 0; line-height: 1.35; }
+.spp-amt { display: inline-block; min-width: 24mm; margin-left: 6mm; }
+.spp-terb { display: block; margin-top: 14px; padding-left: 4mm; font-style: italic; }
+.spp-ttd1 { margin: 34px 0 0 60%; line-height: 2.1; }
+.spp-ttd1 .spp-gap { height: 34px; }
+.spp-nomor { display: inline-block; padding: 3px 12px; border: 1px solid #000; font-size: 7.5pt; white-space: nowrap; }
+
+.spp-info2 { position: relative; font-weight: 700; font-size: 7.5pt; margin-bottom: 6px; }
+.spp-info2 .spp-kv { grid-template-columns: 36mm 6mm 1fr; padding: 2px 0 2px 0; }
+.spp-info2 .spp-nomor { position: absolute; right: 0; top: 2px; }
+
+.spp-box { border: 1.5px solid #000; }
+.spp-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }
+.spp-tbl th, .spp-tbl td { padding: 3px 5px; }
+.spp-tbl th { border: 1px solid #000; font-weight: 700; text-align: center; }
+.spp-tbl td { border-left: 1px solid #000; border-right: 1px solid #000; padding-top: 5px; padding-bottom: 5px; }
+.spp-tbl tr:first-child th { border-top: 0; }
+.spp-tbl th:first-child, .spp-tbl td:first-child { border-left: 0; }
+.spp-tbl th:last-child, .spp-tbl td:last-child { border-right: 0; }
+.spp-tbl .n { text-align: right; }
+.spp-tbl .m { text-align: center; }
+.spp-tbl tr.spp-tot td { border-top: 1px solid #000; font-weight: 700; text-align: right; }
+.spp-tbl tr.spp-tot td:first-child, .spp-tbl tr.spp-tot td:nth-child(2) { border-right: 0; }
+
+.spp-sg { padding: 3px 0 8px; border-top: 1px solid #000; font-size: 7.5pt; }
+.spp-sg .spp-tgl { text-align: center; margin-bottom: 4px; }
+.spp-sg .spp-row { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 14mm; }
+.spp-sg .spp-jab { min-height: 2.6em; }
+.spp-sg .spp-gap { height: 30px; }
+.spp-ttd-row { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 14mm; }
+.spp-jab { min-height: 2.6em; }
+.spp-gap { height: 30px; }
+
+.spp-n { text-align: right; }
+.spp-m { text-align: center; }
+
+.spp-top3 { text-align: right; margin-bottom: 14px; }
+.spp-in3 { padding: 8px 0 0 10mm; }
+.spp-in3 .spp-kv { grid-template-columns: 24mm 6mm 1fr; padding: 4px 0; }
+
+.spp-stmt { padding: 10px 8px 8px; line-height: 2; }
+.spp-stmt .spp-ttd1 { margin-top: 6px; }
+
+.spp-foot { position: absolute; left: 18mm; right: 18mm; bottom: 11mm; display: flex; align-items: center; gap: 12px; padding-top: 3px; border-top: 1px solid #000; font-size: 7pt; }
+.spp-sheet.land .spp-foot { left: 17mm; right: 17mm; }
+.spp-foot .spp-tag { background: #000; color: #fff; padding: 1px 14px 1px 12px; }
+.spp-foot .spp-pg { margin-left: auto; }
+
+/* Pratinjau di dalam dialog aplikasi */
+.kwt-pratinjau .spp-sheet { zoom: .8; margin: 4mm auto; }
+
+/* Print: SPP sheets take full page */
+@media print {
+  #kwt-print-root .spp-sheet { margin: 0; box-shadow: none; height: 296mm; }
+  #kwt-print-root .spp-sheet.land { height: 209mm; }
+  #kwt-print-root .spp-sheet:last-child { break-after: auto; }
+}

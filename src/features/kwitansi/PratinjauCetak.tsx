@@ -5,16 +5,9 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { dibayarkan, rupiah, terbilang } from "./format";
 import { KwitansiPengeluaran } from "./KwitansiPengeluaran";
-import type { KwitansiData } from "./types";
+import { renderSppTemplate, TEMPLATE_LABEL, type SppTemplate } from "./sppTemplate";
+import type { KwitansiData, SppTemplateData } from "./types";
 import "./kwitansi.css";
-
-type CetakTemplate = "spp-1" | "spp-2" | "sptjb";
-
-const TEMPLATE_LABEL: Record<CetakTemplate, string> = {
-  "spp-1": "SPP-1",
-  "spp-2": "SPP-2",
-  sptjb: "SPTJB",
-};
 
 const hariIni = () => {
   const d = new Date();
@@ -34,6 +27,7 @@ const jamIni = jamAcak;
  * Popup sebelum cetak: isi tanggal & jam "dicetakPada", kabupaten bila kosong,
  * dan potongan (terisi otomatis dari data). Pratinjau ikut terisi langsung.
  * Mendukung satu kwitansi (awal+onCetak) atau banyak (banyak+onCetakBanyak).
+ * Template cetak: SPP-1 (surat pengantar), SPP-2 (rincian), SPTJB, atau SEMUA.
  */
 export function PratinjauCetak({
   open,
@@ -42,13 +36,15 @@ export function PratinjauCetak({
   onCetak,
   banyak,
   onCetakBanyak,
+  sppData,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   awal?: KwitansiData;
-  onCetak?: (d: KwitansiData) => void;
+  onCetak?: (d: KwitansiData, template: SppTemplate) => void;
   banyak?: KwitansiData[];
-  onCetakBanyak?: (ds: KwitansiData[]) => void;
+  onCetakBanyak?: (ds: KwitansiData[], template: SppTemplate) => void;
+  sppData?: SppTemplateData;
 }) {
   const pertama = banyak?.[0] ?? awal;
   const [tgl, setTgl] = useState(pertama?.tanggal || hariIni());
@@ -57,7 +53,7 @@ export function PratinjauCetak({
   const [ppn, setPpn] = useState(pertama?.potongan.ppn ?? 0);
   const [pph, setPph] = useState(pertama?.potongan.pph ?? 0);
   const [lainnya, setLainnya] = useState(pertama?.potongan.lainnya ?? 0);
-  const [template, setTemplate] = useState<CetakTemplate>("spp-1");
+  const [template, setTemplate] = useState<SppTemplate>("spp-1");
 
   if (!pertama) return null;
 
@@ -72,8 +68,41 @@ export function PratinjauCetak({
   const totalBayar = semua.reduce((s, d) => s + dibayarkan(d), 0);
 
   const cetak = () => {
-    if (banyak && onCetakBanyak) onCetakBanyak(banyak.map(terapkan));
-    else if (awal && onCetak) onCetak(data);
+    const ds = banyak ? banyak.map(terapkan) : [data];
+    if (banyak && onCetakBanyak) onCetakBanyak(ds, template);
+    else if (awal && onCetak) onCetak(data, template);
+  };
+
+  // Pratinjau template SPP (jika data SPP tersedia), else fallback ke kwitansi untuk SPP-1.
+  const pratinjauSpp = (t: SppTemplate): React.JSX.Element => {
+    if (sppData) {
+      return renderSppTemplate({ template: t, d: sppData, kwitansis: semua });
+    }
+    if (t === "spp-1") {
+      return (
+        <>
+          {banyak ? (
+            <>
+              {banyak.map((d) => (
+                <div key={d.nomor} className="mb-2">
+                  <KwitansiPengeluaran data={terapkan(d)} tampilkanPenandaCetak={false} />
+                </div>
+              ))}
+              <p className="p-2 text-xs text-muted-foreground border-t pt-2">
+                Total {banyak.length} kwitansi · Rp <b className="tabular-nums">{rupiah(totalBayar)}</b>
+              </p>
+            </>
+          ) : (
+            <KwitansiPengeluaran data={data} />
+          )}
+        </>
+      );
+    }
+    return (
+      <div className="p-6 text-center text-xs text-muted-foreground">
+        <p>Data SPP tidak tersedia — template <b>{TEMPLATE_LABEL[t]}</b> hanya bisa ditampilkan setelah file SPP dimuat.</p>
+      </div>
+    );
   };
 
   return (
@@ -84,15 +113,14 @@ export function PratinjauCetak({
             {banyak ? `Cetak ${banyak.length} kwitansi` : `Cetak kwitansi ${pertama.nomor}`}
           </DialogTitle>
           <div className="flex gap-1 mt-1">
-            {(["spp-1", "spp-2", "sptjb"] as CetakTemplate[]).map((t) => (
+            {(["spp-1", "spp-2", "sptjb", "semua"] as SppTemplate[]).map((t) => (
               <Button
                 key={t}
                 size="sm"
                 variant={template === t ? "default" : "outline"}
                 className="text-xs"
                 onClick={() => setTemplate(t)}
-                disabled={t !== "spp-1"}
-                title={t === "spp-1" ? "Template SPP-1 (aktif)" : "Menunggu contoh PDF"}
+                title={`Template ${TEMPLATE_LABEL[t]}`}
               >
                 {TEMPLATE_LABEL[t]}
               </Button>
@@ -128,7 +156,7 @@ export function PratinjauCetak({
             </div>
           </div>
           <div className="kwt-pratinjau rounded-md border">
-            {template === "spp-1" ? (
+            {sppData ? pratinjauSpp(template) : template === "spp-1" ? (
               banyak ? (
                 <>
                   {banyak.map((d) => (
@@ -145,8 +173,7 @@ export function PratinjauCetak({
               )
             ) : (
               <div className="p-6 text-center text-xs text-muted-foreground">
-                <p>Template <b>{TEMPLATE_LABEL[template]}</b> belum tersedia.</p>
-                <p className="mt-1">Silakan kirim contoh PDF SPP-{template === "spp-2" ? "2" : "TJB"} agar dapat disesuaikan.</p>
+                <p>Data SPP tidak tersedia — template <b>{TEMPLATE_LABEL[template]}</b> hanya bisa ditampilkan setelah file SPP dimuat.</p>
               </div>
             )}
           </div>

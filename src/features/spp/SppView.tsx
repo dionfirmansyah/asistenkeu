@@ -14,11 +14,13 @@ import { DanaBadge } from "@/components/ui/dana-badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { buktiKeKwitansi, KwitansiPengeluaran, PratinjauCetak } from "@/features/kwitansi";
+import { buktiKeKwitansi, KwitansiPengeluaran, PratinjauCetak, renderSppTemplate, type SppTemplate, type SppTemplateData } from "@/features/kwitansi";
 import { createPortal } from "react-dom";
 import { Printer, Wallet } from "lucide-react";
 import type { KwitansiData } from "@/features/kwitansi";
 import type { Row } from "@/types/smd";
+import { villageIdentity } from "@/lib/engine/identity";
+import { rekName } from "@/features/rpd/print";
 
 const linkOf = (v: unknown) => {
   const t = vt(v).replace(/^tps:\/\//i, "https://");
@@ -44,6 +46,8 @@ export default function SppView() {
   const [printAwal, setPrintAwal] = useState<KwitansiData | null>(null);
   const [printBatch, setPrintBatch] = useState<KwitansiData[] | null>(null);
   const [printJadi, setPrintJadi] = useState<KwitansiData | KwitansiData[] | null>(null);
+  const [printTemplate, setPrintTemplate] = useState<SppTemplate>("spp-1");
+  const [printSppData, setPrintSppData] = useState<SppTemplateData | undefined>(undefined);
   const [msg, setMsg] = useState("");
 
   const loadEdits = async () => {
@@ -196,13 +200,99 @@ export default function SppView() {
     setEditCtx(null);
   };
 
+  const isoTanggal = (v: unknown): string => {
+    const d = vt(v);
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+  };
+
+  /** Susun data template SPP dari record SPP + flat RAB untuk satu No SPP. */
+  const buildSppTemplateData = (noSpp: string): SppTemplateData | null => {
+    if (!spp || !tables) return null;
+    const regRow = appliedReg.find((r) => vt(r.No_SPP) === noSpp);
+    if (!regRow) return null;
+    const kws = buktiBySpp.get(noSpp) ?? [];
+    const ident = villageIdentity(tables);
+    const tahun = vt(regRow.Tgl_SPP) ? parseInt(vt(regRow.Tgl_SPP).slice(0, 4), 10) : undefined;
+    const tanggal = isoTanggal(vt(regRow.Tgl_SPP));
+
+    // Bidang / subBidang / kegiatan dari flat RAB (berdasarkan Kd_Keg pertama yang ditemukan)
+    const kegKode = kws.length > 0 ? vt(kws[0].Kd_Keg) : "";
+    const fr = flat.find((r) => !r.Pseudo && r.Kd_Keg === kegKode);
+
+    // Rincian belanja: group flat rows per Kd_Rincian dalam kegiatan yang sama
+    const byRincian = new Map<string, { kode: string; uraian: string; pagu: number; skrg: number }>();
+    for (const r of flat) {
+      if (r.Pseudo || r.Kd_Keg !== kegKode) continue;
+      const kd = vt(r.Kd_Rincian);
+      const existing = byRincian.get(kd);
+      const skrg = Number(r.AnggaranStlhPAK ?? r.AnggaranPAK ?? r.Anggaran ?? 0);
+      if (existing) {
+        existing.skrg += skrg;
+      } else {
+        byRincian.set(kd, {
+          kode: kd,
+          uraian: vt(r.Nama_Rincian) || "-",
+          pagu: Number(r.AnggaranStlhPAK ?? r.Anggaran ?? 0),
+          skrg,
+        });
+      }
+    }
+    const rincian = Array.from(byRincian.values()).map((r) => ({
+      kode: r.kode,
+      uraian: r.uraian,
+      pagu: r.pagu,
+      lalu: 0,
+      skrg: r.skrg,
+      jml: r.skrg,
+      sisa: r.pagu - r.skrg,
+    }));
+
+    const ttd = [
+      { aksi: "Disetujui untuk dibayarkan", jabatan: `KEPALA DESA ${ident.desa}`, nama: ident.kades || "-" },
+      { aksi: "Telah dibayar lunas", jabatan: `KEPALA URUSAN KEUANGAN DESA ${ident.desa}`, nama: ident.kaur || "-" },
+      { aksi: "Telah dilakukan verifikasi", jabatan: `SEKRETARIS DESA ${ident.desa}`, nama: ident.sekdes || "-" },
+    ];
+
+    const penerimaDetail = kws.map((b) => ({
+      nama: vt(b.Nm_Penerima),
+      alamat: ident.desa,
+      bukti: vt(b.No_Bukti),
+      uraian: vt(b.Keterangan),
+      rekening: rekName(vt(b.Kd_Rincian)) || vt(b.Kd_Rincian) || "-",
+      jumlah: Number(b.Nilai) || 0,
+    }));
+
+    return {
+      nomor: vt(regRow.No_SPP),
+      desa: ident.desa,
+      kabupaten: ident.kecamatan || "KOTABARU",
+      tahun,
+      perdes: { nomor: "-", tanggal: "-" },
+      bidang: fr?.Nama_Bidang || "-",
+      subBidang: fr?.Nama_SubBidang || "-",
+      kegiatan: fr?.Nama_Kegiatan || kegKode || "-",
+      waktu: "-",
+      keperluan: vt(regRow.Keterangan),
+      tanggal: tanggal ? `${ident.desa}, ${tanggal}` : "-",
+      pelaksana: ident.kaur || "-",
+      rincian,
+      ttd,
+      penerimaDetail,
+      cetak: {},
+    };
+  };
+
   const bukaCetak = (noSpp: string, noBukti: string) => {
     if (!spp) return;
     const b = spp.bukti.find((x) => vt(x.No_SPP) === noSpp && vt(x.No_Bukti) === noBukti);
     if (!b) return;
     const pots = potByBukti.get(`${noSpp}¦${noBukti}`) ?? [];
     const fr = flat.find((r) => !r.Pseudo && r.Kd_Keg === vt(b.Kd_Keg));
-    setPrintAwal(buktiKeKwitansi(b, pots, tables, fr?.Nama_Kegiatan || vt(b.Kd_Keg), fr?.ID_Keg || vt(b.Kd_Keg)));
+    const kw = buktiKeKwitansi(b, pots, tables, fr?.Nama_Kegiatan || vt(b.Kd_Keg), fr?.ID_Keg || vt(b.Kd_Keg));
+    const sppData = buildSppTemplateData(noSpp);
+    setPrintSppData(sppData ?? undefined);
+    setPrintAwal(kw);
   };
 
   const bukaCetakSemua = (noSpp: string) => {
@@ -215,6 +305,8 @@ export default function SppView() {
       const fr = flat.find((r) => !r.Pseudo && r.Kd_Keg === vt(b.Kd_Keg));
       return buktiKeKwitansi(b, pots, tables, fr?.Nama_Kegiatan || vt(b.Kd_Keg), fr?.ID_Keg || vt(b.Kd_Keg));
     });
+    const sppData = buildSppTemplateData(noSpp);
+    setPrintSppData(sppData ?? undefined);
     setPrintBatch(daftar);
   };
 
@@ -534,8 +626,10 @@ export default function SppView() {
           open={printAwal !== null}
           onOpenChange={(o) => !o && setPrintAwal(null)}
           awal={printAwal}
-          onCetak={(d) => {
+          sppData={printSppData}
+          onCetak={(d, tmpl) => {
             setPrintAwal(null);
+            setPrintTemplate(tmpl);
             setPrintJadi(d);
             setTimeout(() => window.print(), 350);
           }}
@@ -546,14 +640,27 @@ export default function SppView() {
           open={printBatch !== null}
           onOpenChange={(o) => !o && setPrintBatch(null)}
           banyak={printBatch}
-          onCetakBanyak={(ds) => {
+          sppData={printSppData}
+          onCetakBanyak={(ds, tmpl) => {
             setPrintBatch(null);
+            setPrintTemplate(tmpl);
             setPrintJadi(ds);
             setTimeout(() => window.print(), 350);
           }}
         />
       )}
-      {printJadi &&
+      {printJadi && printSppData && (
+        createPortal(
+          <div id="kwt-print-root">
+            {renderSppTemplate({
+              template: printTemplate,
+              d: printSppData,
+              kwitansis: Array.isArray(printJadi) ? printJadi : [printJadi],
+            })}
+          </div>,
+          document.body,
+        ))}
+      {printJadi && !printSppData && (
         createPortal(
           <div id="kwt-print-root">
             {Array.isArray(printJadi) ? (
@@ -563,7 +670,7 @@ export default function SppView() {
             )}
           </div>,
           document.body,
-        )}
+        ))}
     </div>
   );
 }

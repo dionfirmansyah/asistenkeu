@@ -4,5 +4,7 @@ export { RincianNilai } from "./RincianNilai";
 export { Barcode } from "./Barcode";
 export { PratinjauCetak } from "./PratinjauCetak";
 export { buktiKeKwitansi } from "./buildKwitansiData";
+export { renderSppTemplate, TEMPLATE_LABEL, type SppTemplate } from "./sppTemplate";
+export type { SppTemplateData } from "./types";
 export { dibayarkan, rupiah, stempelCetak, tanggalIndonesia, terbilang } from "./format";
 export type { KwitansiData, KwitansiPengeluaranProps } from "./types";
