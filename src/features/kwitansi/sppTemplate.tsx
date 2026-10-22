@@ -6,17 +6,11 @@ const e = (s: unknown): string =>
 
 const rup = (n: number): string => rupiah(Number.isFinite(n) ? Math.trunc(n) : 0);
 
-const tglIndo = (iso?: string, kota?: string): string => {
+const ddmmyyyy = (iso?: string): string => {
   if (!iso) return "-";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return iso;
-  const BULAN = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-  ];
-  const hari = parseInt(m[3], 10);
-  const bulan = BULAN[parseInt(m[2], 10) - 1] || m[2];
-  return `${kota ?? ""}, ${hari} ${bulan} ${m[1]}`;
+  return `${m[3]}${m[2]}${m[1]}`;
 };
 
 const foot = (waktu?: string): string =>
@@ -44,7 +38,7 @@ interface SheetProps {
 /** Halaman 1: Surat pengantar SPP (portrait) */
 export function SppSheet1({ d, kwitansi }: SheetProps): React.JSX.Element {
   const jumlah = kwitansi?.jumlah ?? 0;
-  const tglDikeluarkan = d.tanggal || tglIndo(kwitansi?.tanggal, d.desa);
+  const tglDikeluarkan = kwitansi?.tanggal ? ddmmyyyy(kwitansi.tanggal) : (d.tanggal ?? "-");
   return (
     <section className="spp-sheet">
       <div dangerouslySetInnerHTML={{ __html: head(d.desa, d.tahun) }} />
@@ -63,7 +57,7 @@ export function SppSheet1({ d, kwitansi }: SheetProps): React.JSX.Element {
         <div className="spp-kv"><span>e.&nbsp; Keperluan</span><span>:</span><span>{e(d.keperluan ?? "-")}</span></div>
         <div className="spp-kv"><span>f.&nbsp; Jumlah Diminta</span><span>:</span><span>Rp.<span className="spp-amt">{rup(jumlah)}</span><span className="spp-terb">( {terbilang(jumlah)} Rupiah)</span></span></div>
       </div>
-      <div className="spp-ttd1">{d.desa}, &nbsp;{tglDikeluarkan}<br />Pelaksana Kegiatan,<div className="spp-gap"></div>{e(d.pelaksana ?? "-")}</div>
+      <div className="spp-ttd1"> &nbsp;{tglDikeluarkan}<br />Pelaksana Kegiatan,<div className="spp-gap"></div>{e(d.pelaksana ?? "-")}</div>
       <div dangerouslySetInnerHTML={{ __html: foot(d.cetak?.spp1) }} />
     </section>
   );
