@@ -5,9 +5,17 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { dibayarkan, rupiah, terbilang } from "./format";
 import { KwitansiPengeluaran } from "./KwitansiPengeluaran";
-import { renderSppTemplate, TEMPLATE_LABEL, type SppTemplate } from "./sppTemplate";
-import type { KwitansiData, SppTemplateData } from "./types";
+import { renderSppTemplate, type SppTemplate } from "./sppTemplate";
+import type { CetakTemplate, KwitansiData, SppTemplateData } from "./types";
 import "./kwitansi.css";
+
+const TEMPLATE_LABEL: Record<CetakTemplate, string> = {
+  kwitansi: "Kwitansi",
+  "spp-1": "SPP-1",
+  "spp-2": "SPP-2",
+  sptjb: "SPTJB",
+  semua: "SEMUA",
+};
 
 const hariIni = () => {
   const d = new Date();
@@ -27,7 +35,7 @@ const jamIni = jamAcak;
  * Popup sebelum cetak: isi tanggal & jam "dicetakPada", kabupaten bila kosong,
  * dan potongan (terisi otomatis dari data). Pratinjau ikut terisi langsung.
  * Mendukung satu kwitansi (awal+onCetak) atau banyak (banyak+onCetakBanyak).
- * Template cetak: SPP-1 (surat pengantar), SPP-2 (rincian), SPTJB, atau SEMUA.
+ * Template cetak: Kwitansi, SPP-1 (surat pengantar), SPP-2 (rincian), SPTJB, atau SEMUA.
  */
 export function PratinjauCetak({
   open,
@@ -41,9 +49,9 @@ export function PratinjauCetak({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   awal?: KwitansiData;
-  onCetak?: (d: KwitansiData, template: SppTemplate) => void;
+  onCetak?: (d: KwitansiData, template: CetakTemplate) => void;
   banyak?: KwitansiData[];
-  onCetakBanyak?: (ds: KwitansiData[], template: SppTemplate) => void;
+  onCetakBanyak?: (ds: KwitansiData[], template: CetakTemplate) => void;
   sppData?: SppTemplateData;
 }) {
   const pertama = banyak?.[0] ?? awal;
@@ -53,7 +61,7 @@ export function PratinjauCetak({
   const [ppn, setPpn] = useState(pertama?.potongan.ppn ?? 0);
   const [pph, setPph] = useState(pertama?.potongan.pph ?? 0);
   const [lainnya, setLainnya] = useState(pertama?.potongan.lainnya ?? 0);
-  const [template, setTemplate] = useState<SppTemplate>("spp-1");
+  const [template, setTemplate] = useState<CetakTemplate>("kwitansi");
 
   if (!pertama) return null;
 
@@ -73,34 +81,31 @@ export function PratinjauCetak({
     else if (awal && onCetak) onCetak(data, template);
   };
 
-  // Pratinjau template SPP (jika data SPP tersedia), else fallback ke kwitansi untuk SPP-1.
-  const pratinjauSpp = (t: SppTemplate): React.JSX.Element => {
-    if (sppData) {
-      return renderSppTemplate({ template: t, d: sppData, kwitansis: semua });
+  // Pratinjau kolom kanan: Kwitansi selalu tersedia; template SPP hanya jika data SPP tersedia.
+  const pratinjau = (): React.JSX.Element => {
+    if (template === "kwitansi") {
+      if (banyak) {
+        return (
+          <>
+            {banyak.map((d) => (
+              <div key={d.nomor} className="mb-2">
+                <KwitansiPengeluaran data={terapkan(d)} tampilkanPenandaCetak={false} />
+              </div>
+            ))}
+            <p className="p-2 text-xs text-muted-foreground border-t pt-2">
+              Total {banyak.length} kwitansi · Rp <b className="tabular-nums">{rupiah(totalBayar)}</b>
+            </p>
+          </>
+        );
+      }
+      return <KwitansiPengeluaran data={data} />;
     }
-    if (t === "spp-1") {
-      return (
-        <>
-          {banyak ? (
-            <>
-              {banyak.map((d) => (
-                <div key={d.nomor} className="mb-2">
-                  <KwitansiPengeluaran data={terapkan(d)} tampilkanPenandaCetak={false} />
-                </div>
-              ))}
-              <p className="p-2 text-xs text-muted-foreground border-t pt-2">
-                Total {banyak.length} kwitansi · Rp <b className="tabular-nums">{rupiah(totalBayar)}</b>
-              </p>
-            </>
-          ) : (
-            <KwitansiPengeluaran data={data} />
-          )}
-        </>
-      );
+    if (sppData) {
+      return renderSppTemplate({ template: template as SppTemplate, d: sppData, kwitansis: semua });
     }
     return (
       <div className="p-6 text-center text-xs text-muted-foreground">
-        <p>Data SPP tidak tersedia — template <b>{TEMPLATE_LABEL[t]}</b> hanya bisa ditampilkan setelah file SPP dimuat.</p>
+        <p>Data SPP tidak tersedia — template <b>{TEMPLATE_LABEL[template]}</b> hanya bisa ditampilkan setelah file SPP dimuat.</p>
       </div>
     );
   };
@@ -113,7 +118,7 @@ export function PratinjauCetak({
             {banyak ? `Cetak ${banyak.length} kwitansi` : `Cetak kwitansi ${pertama.nomor}`}
           </DialogTitle>
           <div className="flex gap-1 mt-1">
-            {(["spp-1", "spp-2", "sptjb", "semua"] as SppTemplate[]).map((t) => (
+            {(["kwitansi", "spp-1", "spp-2", "sptjb", "semua"] as CetakTemplate[]).map((t) => (
               <Button
                 key={t}
                 size="sm"
@@ -156,26 +161,7 @@ export function PratinjauCetak({
             </div>
           </div>
           <div className="kwt-pratinjau rounded-md border">
-            {sppData ? pratinjauSpp(template) : template === "spp-1" ? (
-              banyak ? (
-                <>
-                  {banyak.map((d) => (
-                    <div key={d.nomor} className="mb-2">
-                      <KwitansiPengeluaran data={terapkan(d)} tampilkanPenandaCetak={false} />
-                    </div>
-                  ))}
-                  <p className="p-2 text-xs text-muted-foreground border-t pt-2">
-                    Total {banyak.length} kwitansi · Rp <b className="tabular-nums">{rupiah(totalBayar)}</b>
-                  </p>
-                </>
-              ) : (
-                <KwitansiPengeluaran data={data} />
-              )
-            ) : (
-              <div className="p-6 text-center text-xs text-muted-foreground">
-                <p>Data SPP tidak tersedia — template <b>{TEMPLATE_LABEL[template]}</b> hanya bisa ditampilkan setelah file SPP dimuat.</p>
-              </div>
-            )}
+            {pratinjau()}
           </div>
         </div>
       </DialogContent>

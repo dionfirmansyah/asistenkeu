@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { buktiKeKwitansi, KwitansiPengeluaran, PratinjauCetak, renderSppTemplate, type SppTemplate, type SppTemplateData } from "@/features/kwitansi";
 import { createPortal } from "react-dom";
 import { Printer, Wallet } from "lucide-react";
-import type { KwitansiData } from "@/features/kwitansi";
+import type { CetakTemplate, KwitansiData } from "@/features/kwitansi";
 import type { Row } from "@/types/smd";
 import { villageIdentity } from "@/lib/engine/identity";
 import { rekName } from "@/features/rpd/print";
@@ -46,7 +46,7 @@ export default function SppView() {
   const [printAwal, setPrintAwal] = useState<KwitansiData | null>(null);
   const [printBatch, setPrintBatch] = useState<KwitansiData[] | null>(null);
   const [printJadi, setPrintJadi] = useState<KwitansiData | KwitansiData[] | null>(null);
-  const [printTemplate, setPrintTemplate] = useState<SppTemplate>("spp-1");
+  const [printTemplate, setPrintTemplate] = useState<CetakTemplate>("kwitansi");
   const [printSppData, setPrintSppData] = useState<SppTemplateData | undefined>(undefined);
   const [msg, setMsg] = useState("");
 
@@ -649,29 +649,32 @@ export default function SppView() {
           }}
         />
       )}
-      {printJadi && printSppData && (
+      {printJadi && (
         createPortal(
           <div id="kwt-print-root">
-            {renderSppTemplate({
-              template: printTemplate,
-              d: printSppData,
-              kwitansis: Array.isArray(printJadi) ? printJadi : [printJadi],
-            })}
-          </div>,
-          document.body,
-        ))}
-      {printJadi && !printSppData && (
-        createPortal(
-          <div id="kwt-print-root">
-            {Array.isArray(printJadi) ? (
-              printJadi.map((d) => <KwitansiPengeluaran key={d.nomor} data={d} />)
+            {printTemplate === "kwitansi" ? (
+              Array.isArray(printJadi) ? (
+                printJadi.map((d) => <KwitansiPengeluaran key={d.nomor} data={d} />)
+              ) : (
+                <KwitansiPengeluaran data={printJadi} />
+              )
+            ) : printSppData ? (
+              renderSppTemplate({
+                template: printTemplate as SppTemplate,
+                d: printSppData,
+                kwitansis: Array.isArray(printJadi) ? printJadi : [printJadi],
+              })
             ) : (
-              <KwitansiPengeluaran data={printJadi} />
+              Array.isArray(printJadi) ? (
+                printJadi.map((d) => <KwitansiPengeluaran key={d.nomor} data={d} />)
+              ) : (
+                <KwitansiPengeluaran data={printJadi} />
+              )
             )}
           </div>,
           document.body,
         ))}
-    </div>
+      </div>
   );
 }
 

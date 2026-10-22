@@ -57,3 +57,6 @@ export interface KwitansiPengeluaranProps {
   tampilkanPenandaCetak?: boolean;
   className?: string;
 }
+
+/** Template yang bisa dipilih saat cetak dari Register SPP. */
+export type CetakTemplate = "kwitansi" | "spp-1" | "spp-2" | "sptjb" | "semua";
